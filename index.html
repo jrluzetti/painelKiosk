@@ -59,7 +59,7 @@
     position:absolute; white-space:nowrap; will-change:transform;
     font-family:var(--font-num); font-size:13px; line-height:30px;
     padding-left:100%;
-    animation:scrollTicker 55s linear infinite;
+    animation:scrollTicker 110s linear infinite;
     color:var(--mint);
   }
   #ticker .track span.src{color:var(--orange); margin-right:6px;}
@@ -109,6 +109,7 @@
   .stock-label{
     font-size:10px; letter-spacing:1.3px; text-transform:uppercase; color:var(--orange); font-weight:700;
     background:#070c0b; padding:6px 14px; border-bottom:1px solid var(--line); flex-shrink:0;
+    text-align:center;
   }
   .stock-body{display:flex; align-items:baseline; gap:10px; transition:opacity .3s ease; padding:8px 14px 0;}
   .stock-name{font-size:12px; color:var(--text-dim); min-width:64px;}
@@ -127,7 +128,7 @@
     margin:0 -12px 8px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
     color:var(--orange); font-weight:600; flex-shrink:0;
     background:#070c0b; padding:9px 12px; border-bottom:1px solid var(--line);
-    border-radius:10px 10px 0 0;
+    border-radius:10px 10px 0 0; text-align:center;
   }
   .news-list{list-style:none; margin:0; padding:0; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch;}
   .news-list li{
@@ -159,7 +160,7 @@
   .cal-head{
     font-size:13px; color:var(--orange); text-transform:capitalize; font-weight:600;
     background:#070c0b; margin:0 -14px 8px; padding:9px 14px; border-bottom:1px solid var(--line);
-    border-radius:10px 10px 0 0; flex-shrink:0;
+    border-radius:10px 10px 0 0; flex-shrink:0; text-align:center;
   }
   .cal-grid{
     display:grid; grid-template-columns:repeat(7,1fr); grid-template-rows:auto repeat(6, 1fr);
@@ -1044,21 +1045,27 @@ async function fetchStooq(){
 
 // Preferred path when a Financial Modeling Prep key is configured: real CORS
 // support, no proxy needed, so it's much more reliable than scraping stooq
-// through a public relay. Uses FMP's current /stable/ endpoint (the old
-// /api/v3/ path is now "Legacy" and may not be reachable on new free keys).
+// through a public relay. Indices live on FMP's dedicated batch-index-quotes
+// endpoint (the plain /stable/quote endpoint is for individual stocks/ETFs,
+// not indices, and returns nothing useful for symbols like ^GSPC).
 async function fetchFMP(){
   const symMap = { '^GSPC':'^spx', '^DJI':'^dji', '^IXIC':'^ixic', '^BVSP':'^bvsp', '^FTSE':'^ftse', '^GDAXI':'^gdaxi', '^FCHI':'^fchi' };
-  const fmpSyms = Object.keys(symMap).join(',');
-  const url = `https://financialmodelingprep.com/stable/quote?symbol=${encodeURIComponent(fmpSyms)}&apikey=${encodeURIComponent(CFG.stockApiKey)}`;
+  const url = `https://financialmodelingprep.com/stable/batch-index-quotes?apikey=${encodeURIComponent(CFG.stockApiKey)}`;
   try{
     const r = await fetch(url);
     if(!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
     if(!Array.isArray(j)) throw new Error('resposta inesperada da API: ' + JSON.stringify(j).slice(0,120));
+    let matched = 0;
     j.forEach(q=>{
       const key = symMap[q.symbol];
-      if(key) stockValues[key] = { value: q.price, changePct: q.changesPercentage };
+      if(key){
+        const chg = (q.changesPercentage != null) ? q.changesPercentage : (q.changePercentage != null ? q.changePercentage : null);
+        stockValues[key] = { value: q.price, changePct: chg };
+        matched++;
+      }
     });
+    if(matched === 0) throw new Error('nenhum símbolo esperado encontrado na resposta');
     return true;
   }catch(e){ console.warn('FMP fetch failed', e); return false; }
 }
