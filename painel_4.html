@@ -87,6 +87,13 @@
     display:flex; align-items:center; justify-content:center;
     color:var(--text-dim); font-size:16px; cursor:pointer;
   }
+  #fullscreenBtn{
+    position:fixed; top:10px; right:54px; z-index:50;
+    width:34px; height:34px; border-radius:50%;
+    background:rgba(15,22,20,.7); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-dim); font-size:16px; cursor:pointer;
+  }
 
   /* ============ SCREEN 1: markets + news + calendar/clock ============ */
   #screen-news{}
@@ -96,11 +103,14 @@
   /* --- stock cards --- */
   .stocks-row{height:78px; flex-shrink:0;}
   .stock-card{
-    flex:1; min-width:0; padding:9px 14px; display:flex; flex-direction:column; justify-content:center;
-    gap:3px; position:relative; overflow:hidden;
+    flex:1; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;
+    padding:0; gap:0; position:relative; overflow:hidden;
   }
-  .stock-label{font-size:10px; letter-spacing:1.3px; text-transform:uppercase; color:var(--orange); font-weight:700;}
-  .stock-body{display:flex; align-items:baseline; gap:10px; transition:opacity .3s ease;}
+  .stock-label{
+    font-size:10px; letter-spacing:1.3px; text-transform:uppercase; color:var(--orange); font-weight:700;
+    background:#070c0b; padding:6px 14px; border-bottom:1px solid var(--line); flex-shrink:0;
+  }
+  .stock-body{display:flex; align-items:baseline; gap:10px; transition:opacity .3s ease; padding:8px 14px 0;}
   .stock-name{font-size:12px; color:var(--text-dim); min-width:64px;}
   .stock-value{font-family:var(--font-num); font-size:22px; font-weight:700; color:var(--text);}
   .stock-change{font-family:var(--font-num); font-size:12px; font-weight:700;}
@@ -112,10 +122,12 @@
 
   /* --- news columns --- */
   .news-cols{display:flex; gap:10px; flex:1; min-height:0;}
-  .news-col{flex:1; min-width:0; display:flex; flex-direction:column; padding:10px 12px; position:relative;}
+  .news-col{flex:1; min-width:0; display:flex; flex-direction:column; padding:0 12px 10px; position:relative;}
   .news-col h3{
-    margin:0 0 8px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    margin:0 -12px 8px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
     color:var(--orange); font-weight:600; flex-shrink:0;
+    background:#070c0b; padding:9px 12px; border-bottom:1px solid var(--line);
+    border-radius:10px 10px 0 0;
   }
   .news-list{list-style:none; margin:0; padding:0; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch;}
   .news-list li{
@@ -143,11 +155,21 @@
 
   /* --- bottom row: calendar + clock/weather --- */
   .bottom-row{height:168px; flex-shrink:0;}
-  .cal-card{flex:1; padding:12px 14px; display:flex; flex-direction:column; min-width:0;}
-  .cal-head{font-size:13px; color:var(--orange); text-transform:capitalize; margin-bottom:8px; font-weight:600;}
-  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px; flex:1;}
+  .cal-card{flex:1; padding:0 14px 12px; display:flex; flex-direction:column; min-width:0; overflow:hidden;}
+  .cal-head{
+    font-size:13px; color:var(--orange); text-transform:capitalize; font-weight:600;
+    background:#070c0b; margin:0 -14px 8px; padding:9px 14px; border-bottom:1px solid var(--line);
+    border-radius:10px 10px 0 0; flex-shrink:0;
+  }
+  .cal-grid{
+    display:grid; grid-template-columns:repeat(7,1fr); grid-template-rows:auto repeat(6, 1fr);
+    gap:2px; flex:1; min-height:0;
+  }
   .cal-grid .cal-wd{font-size:9px; color:var(--text-dim); text-align:center; text-transform:uppercase;}
-  .cal-grid .cal-day{font-size:11px; text-align:center; color:var(--text); padding:2px 0; border-radius:4px;}
+  .cal-grid .cal-day{
+    font-size:10.5px; color:var(--text); border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+  }
   .cal-grid .cal-day.today{background:var(--orange); color:#1a0d05; font-weight:700;}
   .cal-grid .cal-day.empty{visibility:hidden;}
 
@@ -260,6 +282,7 @@
 </head>
 <body>
 <div id="app">
+  <div id="fullscreenBtn" onclick="toggleFullscreen()">⛶</div>
   <div id="gear" onclick="openSettings()">⚙</div>
 
   <div id="screens">
@@ -509,6 +532,14 @@ const REDIRECT_URI = location.origin + location.pathname;
 /* ============================================================
    SETTINGS MODAL
 ============================================================ */
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }else{
+    document.exitFullscreen();
+  }
+}
+
 function openSettings(){
   document.getElementById('cfgCity').value = CFG.city;
   document.getElementById('cfgLat').value = CFG.lat;
