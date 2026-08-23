@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Painel</title>
+<style>
+  :root{
+    --bg: #0a0f0e;
+    --panel: #0f1614;
+    --panel-2: #121b19;
+    --line: #1e2b28;
+    --mint: #6be8c9;
+    --mint-dim: #3d8f7d;
+    --orange: #ff7a2e;
+    --orange-dim: #b8552080;
+    --text: #d9f2ea;
+    --text-dim: #6f8b84;
+    --red: #ff5d5d;
+    --font-num: 'Space Mono', 'IBM Plex Mono', 'Courier New', monospace;
+    --font-body: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:var(--font-body);
+    overflow:hidden; user-select:none;
+    -webkit-user-select:none;
+  }
+  #app{position:fixed; inset:0; display:flex; flex-direction:column;}
+
+  /* ---------- shared bits ---------- */
+  .hairline{border:1px solid var(--line);}
+  .card{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line); border-radius:10px;
+  }
+  .glow{text-shadow:0 0 12px rgba(107,232,201,.35);}
+  .mono{font-family:var(--font-num);}
+  .dim{color:var(--text-dim);}
+
+  #screens{flex:1; position:relative; min-height:0;}
+  .screen{
+    position:absolute; inset:0; padding:14px 14px 8px 14px;
+    display:none; flex-direction:column; gap:10px;
+    animation:fadeIn .35s ease;
+  }
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0} to{opacity:1}}
+
+  /* ticker */
+  #ticker{
+    height:30px; overflow:hidden; position:relative;
+    border-top:1px solid var(--line); background:var(--panel);
+    flex-shrink:0;
+  }
+  #ticker .track{
+    position:absolute; white-space:nowrap; will-change:transform;
+    font-family:var(--font-num); font-size:13px; line-height:30px;
+    padding-left:100%;
+    animation:scrollTicker 55s linear infinite;
+    color:var(--mint);
+  }
+  #ticker .track span.src{color:var(--orange); margin-right:6px;}
+  #ticker .track span.item{margin-right:48px;}
+  @keyframes scrollTicker{from{transform:translateX(0)} to{transform:translateX(-100%)}}
+
+  /* bottom nav */
+  #nav{
+    display:flex; justify-content:center; gap:22px;
+    padding:8px 0 10px; flex-shrink:0;
+    transition:opacity .4s ease;
+  }
+  #nav.hidden{opacity:0; pointer-events:none;}
+  #nav button{
+    width:11px; height:11px; border-radius:50%;
+    border:1px solid var(--mint-dim); background:transparent;
+    padding:0; cursor:pointer;
+  }
+  #nav button.on{background:var(--mint); box-shadow:0 0 8px var(--mint);}
+
+  #gear{
+    position:fixed; top:10px; right:12px; z-index:50;
+    width:34px; height:34px; border-radius:50%;
+    background:rgba(15,22,20,.7); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-dim); font-size:16px; cursor:pointer;
+  }
+
+  /* ============ SCREEN 1: markets + news + calendar/clock ============ */
+  #screen-news{}
+  .row{display:flex; gap:10px;}
+  .row.grow{flex:1; min-height:0;}
+
+  /* --- stock cards --- */
+  .stocks-row{height:78px; flex-shrink:0;}
+  .stock-card{
+    flex:1; min-width:0; padding:9px 14px; display:flex; flex-direction:column; justify-content:center;
+    gap:3px; position:relative; overflow:hidden;
+  }
+  .stock-label{font-size:10px; letter-spacing:1.3px; text-transform:uppercase; color:var(--orange); font-weight:700;}
+  .stock-body{display:flex; align-items:baseline; gap:10px; transition:opacity .3s ease;}
+  .stock-name{font-size:12px; color:var(--text-dim); min-width:64px;}
+  .stock-value{font-family:var(--font-num); font-size:22px; font-weight:700; color:var(--text);}
+  .stock-change{font-family:var(--font-num); font-size:12px; font-weight:700;}
+  .stock-change.up{color:var(--mint);}
+  .stock-change.down{color:var(--red);}
+  .stock-dots{position:absolute; right:10px; bottom:8px; display:flex; gap:4px;}
+  .stock-dots span{width:4px; height:4px; border-radius:50%; background:var(--line);}
+  .stock-dots span.on{background:var(--orange);}
+
+  /* --- news columns --- */
+  .news-cols{display:flex; gap:10px; flex:1; min-height:0;}
+  .news-col{flex:1; min-width:0; display:flex; flex-direction:column; padding:10px 12px; position:relative;}
+  .news-col h3{
+    margin:0 0 8px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--orange); font-weight:600; flex-shrink:0;
+  }
+  .news-list{list-style:none; margin:0; padding:0; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch;}
+  .news-list li{
+    font-size:13px; line-height:1.35; padding:8px 2px;
+    border-bottom:1px solid var(--line); color:var(--text); cursor:pointer;
+  }
+  .news-list li:last-child{border-bottom:none;}
+  .news-list .time{color:var(--text-dim); font-size:10px; display:block; margin-top:3px; font-family:var(--font-num);}
+  .news-list::-webkit-scrollbar{width:4px;}
+  .news-list::-webkit-scrollbar-thumb{background:var(--line); border-radius:2px;}
+
+  .news-article{display:none; flex-direction:column; flex:1; min-height:0;}
+  .news-article.on{display:flex;}
+  .news-col.reading .news-list{display:none;}
+  .news-back{
+    background:none; border:1px solid var(--line); color:var(--mint); font-size:11px;
+    padding:5px 10px; border-radius:6px; align-self:flex-start; margin-bottom:8px; cursor:pointer; flex-shrink:0;
+  }
+  .news-article-body{overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch;}
+  .news-article-body h4{font-size:14px; line-height:1.35; margin:0 0 6px; color:var(--text);}
+  .news-article-body .art-meta{font-size:10px; color:var(--text-dim); margin-bottom:8px; font-family:var(--font-num);}
+  .news-article-body img{max-width:100%; border-radius:6px; margin:6px 0;}
+  .news-article-body p{font-size:12.5px; line-height:1.5; color:var(--text); margin:0 0 8px;}
+  .news-article-body a.src-link{color:var(--mint); font-size:11px;}
+
+  /* --- bottom row: calendar + clock/weather --- */
+  .bottom-row{height:168px; flex-shrink:0;}
+  .cal-card{flex:1; padding:12px 14px; display:flex; flex-direction:column; min-width:0;}
+  .cal-head{font-size:13px; color:var(--orange); text-transform:capitalize; margin-bottom:8px; font-weight:600;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px; flex:1;}
+  .cal-grid .cal-wd{font-size:9px; color:var(--text-dim); text-align:center; text-transform:uppercase;}
+  .cal-grid .cal-day{font-size:11px; text-align:center; color:var(--text); padding:2px 0; border-radius:4px;}
+  .cal-grid .cal-day.today{background:var(--orange); color:#1a0d05; font-weight:700;}
+  .cal-grid .cal-day.empty{visibility:hidden;}
+
+  .cw-card{flex:1; padding:12px 16px; display:flex; flex-direction:column; justify-content:center; min-width:0;}
+  .cw-weekday{font-size:13px; color:var(--text-dim); text-transform:capitalize;}
+  .cw-time{font-family:var(--font-num); font-size:44px; font-weight:700; letter-spacing:1px; margin:2px 0 8px;}
+  .cw-weather{display:flex; align-items:center; gap:10px; border-top:1px solid var(--line); padding-top:8px;}
+  .cw-wx-icon{font-size:26px;}
+  .cw-wx-temp{font-family:var(--font-num); font-size:20px; font-weight:700; color:var(--mint);}
+  .cw-wx-meta{font-size:11px; color:var(--text-dim); line-height:1.4;}
+
+  /* ============ SCREEN 2: photos ============ */
+  #screen-photos{padding:0; position:relative;}
+  .photo-stage{position:absolute; inset:0; overflow:hidden; background:#000;}
+  .photo-stage img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0; transition:opacity 1.4s ease, transform 8s linear;
+    transform:scale(1);
+  }
+  .photo-stage img.showing{opacity:1; transform:scale(1.06);}
+  .photo-overlay{
+    position:absolute; left:16px; bottom:14px; z-index:5;
+    font-family:var(--font-num); color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.8);
+  }
+  .photo-overlay .t{font-size:30px; font-weight:700;}
+  .photo-overlay .d{font-size:13px; opacity:.85; text-transform:capitalize;}
+  .photo-empty{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:10px; color:var(--text-dim); text-align:center; padding:30px;
+  }
+  .photo-dots{position:absolute; right:14px; bottom:16px; display:flex; gap:5px; z-index:5;}
+  .photo-dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.35);}
+  .photo-dots span.on{background:#fff;}
+
+  /* ============ SCREEN 3: spotify ============ */
+  #screen-spotify{align-items:center; justify-content:center; position:relative; padding:0; overflow:hidden;}
+  .sp-bg{
+    position:absolute; inset:-10%; filter:blur(60px) saturate(1.4); opacity:.55;
+    background-size:cover; background-position:center; transition:background-image .8s ease;
+  }
+  .sp-content{position:relative; z-index:2; width:100%; height:100%; display:flex; flex-direction:column; padding:20px 22px;}
+  .sp-top{display:flex; align-items:center; gap:8px; color:#fff; font-weight:700; font-size:15px;}
+  .sp-top svg{width:20px; height:20px;}
+  .sp-middle{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;}
+  .sp-art{
+    width:min(46vw, 230px); height:min(46vw, 230px); border-radius:16px;
+    background:#222 center/cover no-repeat; box-shadow:0 20px 50px rgba(0,0,0,.5);
+  }
+  .sp-title{color:#fff; font-size:22px; font-weight:700; text-align:center; padding:0 20px;}
+  .sp-artist{color:rgba(255,255,255,.75); font-size:14px; text-align:center; margin-top:2px;}
+  .sp-wave{display:flex; align-items:flex-end; gap:2px; height:34px; margin-top:6px;}
+  .sp-wave i{
+    width:3px; background:rgba(255,255,255,.85); border-radius:2px;
+    display:block; height:20%; transition:height .25s ease;
+  }
+  .sp-controls{display:flex; align-items:center; justify-content:center; gap:26px; margin-top:6px;}
+  .sp-controls button{
+    background:none; border:none; color:#fff; cursor:pointer; padding:6px;
+    opacity:.9;
+  }
+  .sp-controls button.play{
+    width:52px; height:52px; border-radius:50%; background:#fff; color:#111;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sp-bottom{display:flex; justify-content:space-between; align-items:flex-end; color:#fff;}
+  .sp-date{font-family:var(--font-num); font-size:13px; opacity:.85; text-transform:capitalize;}
+  .sp-time{font-family:var(--font-num); font-size:30px; font-weight:700;}
+  .sp-empty{color:rgba(255,255,255,.6); text-align:center; padding:0 30px;}
+  .sp-connect{
+    margin-top:14px; background:#1ed760; color:#000; border:none; border-radius:24px;
+    padding:12px 22px; font-weight:700; font-size:14px; cursor:pointer;
+  }
+
+  /* ============ settings modal ============ */
+  #settings{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  #settings.show{display:flex;}
+  .modal{
+    width:100%; max-width:520px; max-height:88vh; overflow:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px;
+    color:var(--text);
+  }
+  .modal h2{margin:0 0 12px; font-size:16px; color:var(--mint);}
+  .tabs{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;}
+  .tabs button{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text-dim);
+    padding:7px 12px; border-radius:8px; font-size:12px; cursor:pointer;
+  }
+  .tabs button.on{color:var(--mint); border-color:var(--mint-dim);}
+  .tab-pane{display:none; flex-direction:column; gap:10px;}
+  .tab-pane.on{display:flex;}
+  .tab-pane label{font-size:12px; color:var(--text-dim); display:flex; flex-direction:column; gap:4px;}
+  .tab-pane input, .tab-pane textarea, .tab-pane select{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:6px; padding:8px 10px; font-size:13px; font-family:var(--font-body);
+  }
+  .tab-pane textarea{min-height:80px; resize:vertical;}
+  .modal-actions{display:flex; justify-content:space-between; margin-top:16px; gap:8px;}
+  .btn{
+    background:var(--orange); border:none; color:#1a0d05; font-weight:700;
+    padding:10px 16px; border-radius:8px; font-size:13px; cursor:pointer;
+  }
+  .btn.secondary{background:transparent; border:1px solid var(--line); color:var(--text-dim);}
+  .help{font-size:12px; line-height:1.5; color:var(--text-dim);}
+  .help b{color:var(--text);}
+  .help a{color:var(--mint);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="gear" onclick="openSettings()">⚙</div>
+
+  <div id="screens">
+
+    <!-- ============ SCREEN 1 ============ -->
+    <div class="screen active" id="screen-news">
+      <div class="row stocks-row">
+        <div class="card stock-card" id="stockCardNY">
+          <div class="stock-label">Nova York</div>
+          <div class="stock-body"><span class="stock-value dim">--</span></div>
+          <div class="stock-dots"><span class="on"></span><span></span><span></span></div>
+        </div>
+        <div class="card stock-card" id="stockCardBR">
+          <div class="stock-label">Ibovespa</div>
+          <div class="stock-body"><span class="stock-value dim">--</span></div>
+          <div class="stock-dots"><span class="on"></span><span></span><span></span></div>
+        </div>
+        <div class="card stock-card" id="stockCardEU">
+          <div class="stock-label">Europa</div>
+          <div class="stock-body"><span class="stock-value dim">--</span></div>
+          <div class="stock-dots"><span class="on"></span><span></span><span></span></div>
+        </div>
+      </div>
+
+      <div class="news-cols">
+        <div class="card news-col" id="newsColPR" data-col="PR">
+          <h3>Paraná</h3>
+          <ul class="news-list" id="newsPR"><li class="dim">carregando…</li></ul>
+          <div class="news-article" id="newsArticlePR">
+            <button class="news-back" onclick="hideArticle('PR')">‹ Voltar</button>
+            <div class="news-article-body" id="newsArticleBodyPR"></div>
+          </div>
+        </div>
+        <div class="card news-col" id="newsColBR" data-col="BR">
+          <h3>Brasil</h3>
+          <ul class="news-list" id="newsBR"><li class="dim">carregando…</li></ul>
+          <div class="news-article" id="newsArticleBR">
+            <button class="news-back" onclick="hideArticle('BR')">‹ Voltar</button>
+            <div class="news-article-body" id="newsArticleBodyBR"></div>
+          </div>
+        </div>
+        <div class="card news-col" id="newsColWorld" data-col="World">
+          <h3>Mundo</h3>
+          <ul class="news-list" id="newsWorld"><li class="dim">carregando…</li></ul>
+          <div class="news-article" id="newsArticleWorld">
+            <button class="news-back" onclick="hideArticle('World')">‹ Voltar</button>
+            <div class="news-article-body" id="newsArticleBodyWorld"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row bottom-row">
+        <div class="card cal-card">
+          <div class="cal-head" id="calHead">-- ----</div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+        <div class="card cw-card">
+          <div class="cw-weekday" id="cwWeekday">--</div>
+          <div class="cw-time mono" id="cwTime">--:--</div>
+          <div class="cw-weather">
+            <div class="cw-wx-icon" id="wxIcon">⛅</div>
+            <div class="cw-wx-temp" id="wxTemp">--°</div>
+            <div class="cw-wx-meta" id="wxMeta">carregando…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SCREEN 2 ============ -->
+    <div class="screen" id="screen-photos">
+      <div class="photo-stage" id="photoStage">
+        <div class="photo-empty" id="photoEmpty">
+          <div style="font-size:15px;">Nenhuma foto configurada</div>
+          <div class="dim" style="font-size:12px; max-width:260px;">Toque na engrenagem no canto superior e adicione suas fotos na aba "Fotos".</div>
+        </div>
+      </div>
+      <div class="photo-overlay" id="photoOverlay" style="display:none;">
+        <div class="t mono" id="photoTime">--:--</div>
+        <div class="d" id="photoDate">--</div>
+      </div>
+      <div class="photo-dots" id="photoDots"></div>
+    </div>
+
+    <!-- ============ SCREEN 3 ============ -->
+    <div class="screen" id="screen-spotify">
+      <div class="sp-bg" id="spBg"></div>
+      <div class="sp-content">
+        <div class="sp-top">
+          <svg viewBox="0 0 24 24" fill="#1ed760"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34a.75.75 0 01-1.02.24c-2.82-1.74-6.36-2.13-10.56-1.14a.75.75 0 11-.36-1.46c4.56-1.05 8.52-.6 11.64 1.32.36.24.48.72.24 1.04zm1.44-3.3a.9.9 0 01-1.26.3c-3.24-1.98-8.16-2.58-11.94-1.38a.9.9 0 11-.54-1.74c4.38-1.32 9.78-.66 13.5 1.56.36.24.54.84.24 1.26zm.12-3.36C15.24 8.4 8.88 8.16 5.16 9.36a1.08 1.08 0 11-.66-2.04c4.26-1.38 11.28-1.08 15.66 1.5a1.08 1.08 0 11-1.14 1.86z"/></svg>
+          <span>Spotify</span>
+        </div>
+        <div class="sp-middle" id="spMiddle">
+          <div class="sp-empty">
+            <div style="font-size:16px; color:#fff; font-weight:600;">Nada tocando</div>
+            <div style="font-size:13px; margin-top:6px;">Conecte sua conta para ver o que está tocando.</div>
+            <button class="sp-connect" onclick="spotifyLogin()">Conectar Spotify</button>
+          </div>
+        </div>
+        <div class="sp-bottom">
+          <div>
+            <div class="sp-date" id="spDate">--</div>
+          </div>
+          <div class="sp-time" id="spTime">--:--</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="ticker"><div class="track" id="tickerTrack"><span class="item dim">carregando notícias…</span></div></div>
+  <div id="nav">
+    <button data-i="0" class="on"></button>
+    <button data-i="1"></button>
+    <button data-i="2"></button>
+  </div>
+</div>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div id="settings">
+  <div class="modal">
+    <h2>Configurações do painel</h2>
+    <div class="tabs">
+      <button class="on" data-tab="geral">Geral</button>
+      <button data-tab="fotos">Fotos</button>
+      <button data-tab="spotify">Spotify</button>
+      <button data-tab="ajuda">Ajuda</button>
+    </div>
+
+    <div class="tab-pane on" data-pane="geral">
+      <label>Cidade (nome exibido)
+        <input id="cfgCity" type="text" placeholder="Terra Roxa · PR">
+      </label>
+      <div class="row" style="gap:8px;">
+        <label style="flex:1;">Latitude
+          <input id="cfgLat" type="text" placeholder="-24.815">
+        </label>
+        <label style="flex:1;">Longitude
+          <input id="cfgLon" type="text" placeholder="-53.608">
+        </label>
+      </div>
+      <label>RSS Paraná
+        <input id="cfgRssPR" type="text">
+      </label>
+      <label>RSS Brasil
+        <input id="cfgRssBR" type="text">
+      </label>
+      <label>RSS Mundo
+        <input id="cfgRssWorld" type="text">
+      </label>
+      <label>Chave da API de cotações (Financial Modeling Prep) — opcional, recomendado
+        <input id="cfgStockApiKey" type="text" placeholder="cole aqui sua chave grátis">
+      </label>
+      <div class="help">
+        Sem essa chave, o painel tenta buscar as cotações via proxies públicos gratuitos, que podem falhar de vez em quando. Com a chave, os dados vêm direto e são bem mais estáveis.<br>
+        Crie uma conta grátis em <b>site.financialmodelingprep.com/developer/docs/pricing</b> (plano Free), copie a "API Key" e cole aqui.
+      </div>
+      <label>Girar telas automaticamente
+        <select id="cfgAutoRotate">
+          <option value="0">Desligado</option>
+          <option value="30">A cada 30s</option>
+          <option value="60">A cada 1 min</option>
+          <option value="300">A cada 5 min</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="tab-pane" data-pane="fotos">
+      <label>Álbum compartilhado do iCloud (experimental)
+        <input id="cfgIcloudUrl" type="text" placeholder="https://www.icloud.com/sharedalbum/#B1xxxxxxx">
+      </label>
+      <div class="help">O iCloud não oferece uma API pública para navegadores, então essa opção usa um proxy público (corsproxy.io) para contornar essa limitação. Suas fotos passam por esse serviço de terceiros — deixe em branco se preferir mais privacidade e use a lista manual abaixo.</div>
+      <label>Ou lista manual de imagens (uma URL por linha)
+        <textarea id="cfgPhotoList" placeholder="https://exemplo.com/foto1.jpg&#10;https://exemplo.com/foto2.jpg"></textarea>
+      </label>
+      <label>Trocar foto a cada
+        <select id="cfgPhotoInterval">
+          <option value="8">8 segundos</option>
+          <option value="15">15 segundos</option>
+          <option value="30">30 segundos</option>
+          <option value="60">1 minuto</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="tab-pane" data-pane="spotify">
+      <label>Client ID do app Spotify
+        <input id="cfgSpotifyClientId" type="text" placeholder="cole aqui o Client ID">
+      </label>
+      <div class="help">
+        Crie um app grátis em <b>developer.spotify.com/dashboard</b>, e em "Redirect URIs" cole exatamente este endereço:<br>
+        <code id="redirectUriShow" class="mono" style="word-break:break-all;"></code>
+      </div>
+      <div class="modal-actions" style="margin-top:4px;">
+        <button class="btn secondary" onclick="spotifyLogout()">Desconectar</button>
+        <button class="btn" onclick="spotifyLogin()">Conectar Spotify</button>
+      </div>
+      <div class="help" id="spStatusLine">Status: não conectado.</div>
+    </div>
+
+    <div class="tab-pane" data-pane="ajuda">
+      <div class="help">
+        <b>Como usar no Fire HD 8:</b><br>
+        1. Salve este arquivo (index.html) e hospede em algo simples como GitHub Pages, ou abra localmente pelo navegador Silk.<br>
+        2. Para modo quiosque de verdade (tela cheia, sem barra do navegador, ligando sozinho), instale o app grátis <b>"Fully Kiosk Browser"</b> na Amazon Appstore e aponte o endereço para este arquivo.<br>
+        3. Clima e notícias já funcionam sem nenhuma chave. Se as notícias pararem de carregar, é porque o serviço gratuito rss2json tem limite de uso — tente novamente em alguns minutos.<br>
+        4. Toque nos pontinhos na parte inferior para trocar de tela, ou ative a rotação automática na aba Geral.
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeSettings()">Fechar</button>
+      <button class="btn" onclick="saveSettings()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG / STORAGE
+============================================================ */
+const DEFAULTS = {
+  city: "Terra Roxa · PR",
+  lat: "-24.815",
+  lon: "-53.608",
+  rssPR: "https://g1.globo.com/rss/g1/pr/parana/",
+  rssBR: "https://g1.globo.com/rss/g1/brasil/",
+  rssWorld: "https://g1.globo.com/rss/g1/mundo/",
+  autoRotate: "0",
+  icloudUrl: "",
+  photoList: "",
+  photoInterval: "15",
+  spotifyClientId: "",
+  stockApiKey: ""
+};
+
+function loadCfg(){
+  try{
+    const raw = localStorage.getItem('painel_cfg');
+    return raw ? Object.assign({}, DEFAULTS, JSON.parse(raw)) : Object.assign({}, DEFAULTS);
+  }catch(e){ return Object.assign({}, DEFAULTS); }
+}
+function saveCfg(cfg){ localStorage.setItem('painel_cfg', JSON.stringify(cfg)); }
+let CFG = loadCfg();
+
+const REDIRECT_URI = location.origin + location.pathname;
+
+/* ============================================================
+   SETTINGS MODAL
+============================================================ */
+function openSettings(){
+  document.getElementById('cfgCity').value = CFG.city;
+  document.getElementById('cfgLat').value = CFG.lat;
+  document.getElementById('cfgLon').value = CFG.lon;
+  document.getElementById('cfgRssPR').value = CFG.rssPR;
+  document.getElementById('cfgRssBR').value = CFG.rssBR;
+  document.getElementById('cfgRssWorld').value = CFG.rssWorld;
+  document.getElementById('cfgStockApiKey').value = CFG.stockApiKey;
+  document.getElementById('cfgAutoRotate').value = CFG.autoRotate;
+  document.getElementById('cfgIcloudUrl').value = CFG.icloudUrl;
+  document.getElementById('cfgPhotoList').value = CFG.photoList;
+  document.getElementById('cfgPhotoInterval').value = CFG.photoInterval;
+  document.getElementById('cfgSpotifyClientId').value = CFG.spotifyClientId;
+  document.getElementById('redirectUriShow').textContent = REDIRECT_URI;
+  document.getElementById('spStatusLine').textContent = 'Status: ' + (getSpotifyToken() ? 'conectado.' : 'não conectado.');
+  document.getElementById('settings').classList.add('show');
+}
+function closeSettings(){ document.getElementById('settings').classList.remove('show'); }
+function saveSettings(){
+  CFG.city = document.getElementById('cfgCity').value || DEFAULTS.city;
+  CFG.lat = document.getElementById('cfgLat').value || DEFAULTS.lat;
+  CFG.lon = document.getElementById('cfgLon').value || DEFAULTS.lon;
+  CFG.rssPR = document.getElementById('cfgRssPR').value || DEFAULTS.rssPR;
+  CFG.rssBR = document.getElementById('cfgRssBR').value || DEFAULTS.rssBR;
+  CFG.rssWorld = document.getElementById('cfgRssWorld').value || DEFAULTS.rssWorld;
+  CFG.stockApiKey = document.getElementById('cfgStockApiKey').value.trim();
+  CFG.autoRotate = document.getElementById('cfgAutoRotate').value;
+  CFG.icloudUrl = document.getElementById('cfgIcloudUrl').value.trim();
+  CFG.photoList = document.getElementById('cfgPhotoList').value;
+  CFG.photoInterval = document.getElementById('cfgPhotoInterval').value;
+  CFG.spotifyClientId = document.getElementById('cfgSpotifyClientId').value.trim();
+  saveCfg(CFG);
+  closeSettings();
+  loadWeather(); loadNews(); setupAutoRotate(); loadPhotos(); refreshStocks();
+}
+document.querySelectorAll('.tabs button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelector(`.tab-pane[data-pane="${b.dataset.tab}"]`).classList.add('on');
+  };
+});
+
+/* ============================================================
+   CLOCK
+============================================================ */
+const DAYS = ["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"];
+const MONTHS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function fmtTime(d){ return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function fmtDateLong(d){ return `${DAYS[d.getDay()]}, ${d.getDate()} de ${MONTHS[d.getMonth()]}`; }
+function fmtDateShort(d){ return `${DAYS[d.getDay()].slice(0,3)}, ${d.getDate()}/${d.getMonth()+1}`; }
+
+let lastCalDay = null;
+function tickClock(){
+  const d = new Date();
+  const t = fmtTime(d);
+  document.getElementById('cwTime').textContent = t;
+  document.getElementById('cwWeekday').textContent = DAYS[d.getDay()];
+  document.getElementById('photoTime').textContent = t;
+  document.getElementById('photoDate').textContent = fmtDateLong(d);
+  document.getElementById('spTime').textContent = t;
+  document.getElementById('spDate').textContent = fmtDateShort(d);
+  if(lastCalDay !== d.getDate()){ lastCalDay = d.getDate(); buildCalendar(d); }
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ============================================================
+   CALENDAR
+============================================================ */
+function buildCalendar(d){
+  const year = d.getFullYear(), month = d.getMonth(), today = d.getDate();
+  document.getElementById('calHead').textContent = `${MONTHS[month]} · ${year}`;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  ['dom','seg','ter','qua','qui','sex','sáb'].forEach(w=>{
+    const el = document.createElement('div'); el.className='cal-wd'; el.textContent = w;
+    grid.appendChild(el);
+  });
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  for(let i=0;i<firstWeekday;i++){
+    const el = document.createElement('div'); el.className='cal-day empty';
+    grid.appendChild(el);
+  }
+  for(let day=1; day<=daysInMonth; day++){
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (day===today ? ' today' : '');
+    el.textContent = day;
+    grid.appendChild(el);
+  }
+}
+
+/* ============================================================
+   WEATHER (Open-Meteo, no key needed)
+============================================================ */
+const WMO = {
+  0:['☀️','Céu limpo'],1:['🌤️','Poucas nuvens'],2:['⛅','Parcialmente nublado'],3:['☁️','Nublado'],
+  45:['🌫️','Neblina'],48:['🌫️','Neblina'],
+  51:['🌦️','Garoa fraca'],53:['🌦️','Garoa'],55:['🌧️','Garoa forte'],
+  61:['🌧️','Chuva fraca'],63:['🌧️','Chuva'],65:['🌧️','Chuva forte'],
+  71:['🌨️','Neve fraca'],73:['🌨️','Neve'],75:['❄️','Neve forte'],
+  80:['🌦️','Pancadas de chuva'],81:['🌧️','Pancadas de chuva'],82:['⛈️','Pancadas fortes'],
+  95:['⛈️','Trovoada'],96:['⛈️','Trovoada com granizo'],99:['⛈️','Trovoada com granizo']
+};
+async function loadWeather(){
+  try{
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat}&longitude=${CFG.lon}&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
+    const r = await fetch(url);
+    const j = await r.json();
+    const code = j.current.weathercode;
+    const [icon, desc] = WMO[code] || ['⛅','—'];
+    document.getElementById('wxIcon').textContent = icon;
+    document.getElementById('wxTemp').textContent = Math.round(j.current.temperature_2m) + '°';
+    document.getElementById('wxMeta').innerHTML =
+      `${desc}<br>Máx ${Math.round(j.daily.temperature_2m_max[0])}° · Mín ${Math.round(j.daily.temperature_2m_min[0])}° · Umid ${j.current.relative_humidity_2m}%`;
+  }catch(e){
+    document.getElementById('wxMeta').textContent = 'não foi possível carregar o clima';
+  }
+}
+
+/* ============================================================
+   NEWS (rss2json, no key needed for light use)
+============================================================ */
+let ALL_HEADLINES = [];
+async function fetchFeed(url){
+  try{
+    const r = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(url));
+    const j = await r.json();
+    return (j.items || []).slice(0,8);
+  }catch(e){ return []; }
+}
+function renderList(elId, col, items){
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  hideArticle(col);
+  if(!items.length){ el.innerHTML = '<li class="dim">sem notícias no momento</li>'; return; }
+  items.slice(0,8).forEach((it,idx)=>{
+    const li = document.createElement('li');
+    const d = it.pubDate ? new Date(it.pubDate.replace(' ','T')) : null;
+    li.innerHTML = `${it.title}${d ? `<span class="time">${fmtTime(d)}</span>` : ''}`;
+    li.onclick = ()=> showArticle(col, idx);
+    el.appendChild(li);
+  });
+}
+async function loadNews(){
+  const [pr, br, world] = await Promise.all([
+    fetchFeed(CFG.rssPR), fetchFeed(CFG.rssBR), fetchFeed(CFG.rssWorld)
+  ]);
+  NEWS_ITEMS = { PR: pr, BR: br, World: world };
+  renderList('newsPR', 'PR', pr);
+  renderList('newsBR', 'BR', br);
+  renderList('newsWorld', 'World', world);
+  ALL_HEADLINES = [
+    ...pr.map(i=>({src:'PR', t:i.title})),
+    ...br.map(i=>({src:'BR', t:i.title})),
+    ...world.map(i=>({src:'MUNDO', t:i.title}))
+  ];
+  buildTicker();
+}
+function buildTicker(){
+  const track = document.getElementById('tickerTrack');
+  if(!ALL_HEADLINES.length) return;
+  track.innerHTML = ALL_HEADLINES.map(h=>`<span class="item"><span class="src">${h.src}</span>${h.t}</span>`).join('');
+}
+
+/* ============================================================
+   SCREEN NAVIGATION
+============================================================ */
+const screens = [...document.querySelectorAll('.screen')];
+const navBtns = [...document.querySelectorAll('#nav button')];
+let currentScreen = 0;
+function goToScreen(i){
+  screens.forEach((s,idx)=>s.classList.toggle('active', idx===i));
+  navBtns.forEach((b,idx)=>b.classList.toggle('on', idx===i));
+  currentScreen = i;
+}
+navBtns.forEach(b=> b.onclick = ()=> goToScreen(parseInt(b.dataset.i)) );
+
+let rotateTimer = null;
+function setupAutoRotate(){
+  if(rotateTimer) clearInterval(rotateTimer);
+  const secs = parseInt(CFG.autoRotate);
+  if(!secs) return;
+  rotateTimer = setInterval(()=> goToScreen((currentScreen+1)%3), secs*1000);
+}
+
+/* tap-to-reveal nav (kiosk mode keeps it subtle) */
+let navHideTimer;
+function bumpNav(){
+  document.getElementById('nav').classList.remove('hidden');
+  clearTimeout(navHideTimer);
+  navHideTimer = setTimeout(()=> document.getElementById('nav').classList.add('hidden'), 5000);
+}
+document.getElementById('app').addEventListener('pointerdown', bumpNav);
+bumpNav();
+
+/* ============================================================
+   PHOTOS (screen 2)
+============================================================ */
+let photoUrls = [];
+let photoIdx = 0;
+let photoTimer = null;
+
+function normalizeManualList(text){
+  return (text || '').split('\n').map(s=>s.trim()).filter(Boolean);
+}
+
+async function fetchIcloudAlbum(sharedUrl){
+  // Extracts token from a shared album URL and fetches image list via a public CORS proxy,
+  // since iCloud's endpoints are not CORS-enabled for browser requests.
+  const m = sharedUrl.match(/#([A-Za-z0-9]+)/);
+  if(!m) return [];
+  const token = m[1];
+  const proxy = 'https://corsproxy.io/?url=';
+  try{
+    const baseHost = 'https://p23-sharedstreams.icloud.com';
+    const webstreamUrl = `${baseHost}/${token}/sharedstreams/webstream`;
+    let res = await fetch(proxy + encodeURIComponent(webstreamUrl), {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({streamCtag:null})
+    });
+    let host = baseHost;
+    if(res.status === 330){
+      const redir = await res.json();
+      host = 'https://' + redir['X-Apple-MMe-Host'];
+      res = await fetch(proxy + encodeURIComponent(`${host}/${token}/sharedstreams/webstream`), {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({streamCtag:null})
+      });
+    }
+    const data = await res.json();
+    const guids = (data.photos || []).map(p=>p.photoGuid);
+    if(!guids.length) return [];
+    const assetsRes = await fetch(proxy + encodeURIComponent(`${host}/${token}/sharedstreams/webasseturls`), {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({photoGuids: guids})
+    });
+    const assetsData = await assetsRes.json();
+    const items = data.photos.map(p=>{
+      const derivative = Object.values(p.derivatives).sort((a,b)=>b.width-a.width)[0];
+      const info = assetsData.items[derivative.checksum];
+      if(!info) return null;
+      return `https://${info.url_location}${assetsData.locations[info.url_location].scheme}://${info.url_location}${info.url_path}`;
+    }).filter(Boolean);
+    return items;
+  }catch(e){
+    console.warn('iCloud fetch failed', e);
+    return [];
+  }
+}
+
+async function loadPhotos(){
+  let urls = normalizeManualList(CFG.photoList);
+  if(CFG.icloudUrl){
+    const icloudPhotos = await fetchIcloudAlbum(CFG.icloudUrl);
+    urls = [...icloudPhotos, ...urls];
+  }
+  photoUrls = urls;
+  photoIdx = 0;
+  buildPhotoStage();
+}
+function buildPhotoStage(){
+  const stage = document.getElementById('photoStage');
+  const dotsWrap = document.getElementById('photoDots');
+  stage.querySelectorAll('img').forEach(el=>el.remove());
+  dotsWrap.innerHTML = '';
+  document.getElementById('photoEmpty').style.display = photoUrls.length ? 'none' : 'flex';
+  document.getElementById('photoOverlay').style.display = photoUrls.length ? 'block' : 'none';
+  if(!photoUrls.length) return;
+  photoUrls.forEach((u,i)=>{
+    const img = document.createElement('img');
+    img.src = u;
+    img.className = i===0 ? 'showing' : '';
+    stage.appendChild(img);
+    const dot = document.createElement('span');
+    if(i===0) dot.className='on';
+    dotsWrap.appendChild(dot);
+  });
+  if(photoTimer) clearInterval(photoTimer);
+  const interval = (parseInt(CFG.photoInterval)||15) * 1000;
+  photoTimer = setInterval(advancePhoto, interval);
+}
+function advancePhoto(){
+  if(photoUrls.length < 2) return;
+  const imgs = document.querySelectorAll('#photoStage img');
+  const dots = document.querySelectorAll('#photoDots span');
+  imgs[photoIdx].classList.remove('showing');
+  dots[photoIdx].classList.remove('on');
+  photoIdx = (photoIdx+1) % photoUrls.length;
+  imgs[photoIdx].classList.add('showing');
+  dots[photoIdx].classList.add('on');
+}
+
+/* ============================================================
+   SPOTIFY (Authorization Code + PKCE, client-side only)
+============================================================ */
+function b64url(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function pkceChallenge(verifier){
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return b64url(digest);
+}
+function randomString(len){
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b=> ('0'+b.toString(16)).slice(-2)).join('').slice(0,len);
+}
+async function spotifyLogin(){
+  if(!CFG.spotifyClientId){ openSettings(); return; }
+  const verifier = randomString(64);
+  localStorage.setItem('sp_verifier', verifier);
+  const challenge = await pkceChallenge(verifier);
+  const scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state';
+  const params = new URLSearchParams({
+    client_id: CFG.spotifyClientId,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    scope
+  });
+  location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
+}
+function spotifyLogout(){
+  localStorage.removeItem('sp_access_token');
+  localStorage.removeItem('sp_refresh_token');
+  localStorage.removeItem('sp_expires_at');
+  renderSpotifyEmpty();
+}
+function getSpotifyToken(){ return localStorage.getItem('sp_access_token'); }
+
+async function handleSpotifyRedirect(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if(!code) return;
+  const verifier = localStorage.getItem('sp_verifier');
+  const body = new URLSearchParams({
+    client_id: CFG.spotifyClientId,
+    grant_type: 'authorization_code',
+    code, redirect_uri: REDIRECT_URI, code_verifier: verifier
+  });
+  try{
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body
+    });
+    const j = await r.json();
+    if(j.access_token){
+      localStorage.setItem('sp_access_token', j.access_token);
+      localStorage.setItem('sp_refresh_token', j.refresh_token || '');
+      localStorage.setItem('sp_expires_at', Date.now() + (j.expires_in*1000));
+    }
+  }catch(e){ console.warn('spotify token exchange failed', e); }
+  history.replaceState({}, '', REDIRECT_URI);
+}
+async function refreshSpotifyToken(){
+  const refresh = localStorage.getItem('sp_refresh_token');
+  if(!refresh || !CFG.spotifyClientId) return null;
+  const body = new URLSearchParams({
+    grant_type:'refresh_token', refresh_token: refresh, client_id: CFG.spotifyClientId
+  });
+  try{
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body
+    });
+    const j = await r.json();
+    if(j.access_token){
+      localStorage.setItem('sp_access_token', j.access_token);
+      localStorage.setItem('sp_expires_at', Date.now() + (j.expires_in*1000));
+      return j.access_token;
+    }
+  }catch(e){}
+  return null;
+}
+async function validToken(){
+  let token = getSpotifyToken();
+  const exp = parseInt(localStorage.getItem('sp_expires_at')||'0');
+  if(token && Date.now() < exp - 5000) return token;
+  return await refreshSpotifyToken();
+}
+
+function renderSpotifyEmpty(){
+  document.getElementById('spMiddle').innerHTML = `
+    <div class="sp-empty">
+      <div style="font-size:16px; color:#fff; font-weight:600;">Nada tocando</div>
+      <div style="font-size:13px; margin-top:6px;">Conecte sua conta para ver o que está tocando.</div>
+      <button class="sp-connect" onclick="spotifyLogin()">Conectar Spotify</button>
+    </div>`;
+  document.getElementById('spBg').style.backgroundImage = '';
+}
+function renderSpotifyEmptyPlaying(){
+  document.getElementById('spMiddle').innerHTML = `
+    <div class="sp-empty">
+      <div style="font-size:16px; color:#fff; font-weight:600;">Nenhuma música tocando agora</div>
+      <div style="font-size:13px; margin-top:6px;">Abra o Spotify em algum dispositivo para começar.</div>
+    </div>`;
+}
+let waveTimer = null;
+function renderSpotifyTrack(item, isPlaying){
+  const art = item.album.images[0] ? item.album.images[0].url : '';
+  document.getElementById('spBg').style.backgroundImage = art ? `url('${art}')` : '';
+  const wave = Array.from({length:26}, ()=> `<i style="height:${20+Math.random()*70}%"></i>`).join('');
+  document.getElementById('spMiddle').innerHTML = `
+    <div class="sp-art" style="background-image:url('${art}')"></div>
+    <div>
+      <div class="sp-title">${item.name}</div>
+      <div class="sp-artist">${item.artists.map(a=>a.name).join(', ')}</div>
+    </div>
+    <div class="sp-wave">${wave}</div>
+    <div class="sp-controls">
+      <button onclick="spotifyControl('previous')">⏮</button>
+      <button class="play" onclick="spotifyControl(spCurrentlyPlaying?'pause':'play')">${isPlaying? '❚❚':'▶'}</button>
+      <button onclick="spotifyControl('next')">⏭</button>
+    </div>`;
+  if(waveTimer) clearInterval(waveTimer);
+  if(isPlaying){
+    waveTimer = setInterval(()=>{
+      document.querySelectorAll('.sp-wave i').forEach(i=> i.style.height = (20+Math.random()*70)+'%');
+    }, 260);
+  }
+}
+let spCurrentlyPlaying = false;
+async function pollSpotify(){
+  const token = await validToken();
+  if(!token){ renderSpotifyEmpty(); return; }
+  try{
+    const r = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+      headers:{Authorization:'Bearer '+token}
+    });
+    if(r.status === 204){ spCurrentlyPlaying=false; renderSpotifyEmptyPlaying(); return; }
+    const j = await r.json();
+    if(!j || !j.item){ renderSpotifyEmptyPlaying(); return; }
+    spCurrentlyPlaying = j.is_playing;
+    renderSpotifyTrack(j.item, j.is_playing);
+  }catch(e){ /* keep last state on transient errors */ }
+}
+async function spotifyControl(action){
+  const token = await validToken();
+  if(!token) return;
+  const map = {play:['PUT','me/player/play'], pause:['PUT','me/player/pause'], next:['POST','me/player/next'], previous:['POST','me/player/previous']};
+  const [method, path] = map[action];
+  try{
+    await fetch('https://api.spotify.com/v1/'+path, { method, headers:{Authorization:'Bearer '+token} });
+    setTimeout(pollSpotify, 500);
+  }catch(e){}
+}
+
+/* ============================================================
+   MARKET CARDS (Nova York, Ibovespa, Europa) — stooq via CORS relay
+   plus USD/BRL and Bitcoin from no-key, CORS-friendly APIs.
+============================================================ */
+const STOCK_GROUPS = {
+  NY: { label:'Nova York', items:[
+    {sym:'^dji', name:'Dow Jones'}, {sym:'^ixic', name:'Nasdaq'}, {sym:'^spx', name:'S&P 500'}
+  ]},
+  BR: { label:'Ibovespa', items:[
+    {sym:'^bvsp', name:'Ibovespa'}, {sym:'usdbrl', name:'Dólar'}, {sym:'btcusd', name:'Bitcoin'}
+  ]},
+  EU: { label:'Europa', items:[
+    {sym:'^ftse', name:'FTSE 100'}, {sym:'^gdaxi', name:'DAX'}, {sym:'^fchi', name:'CAC 40'}
+  ]}
+};
+let stockValues = {}; // sym -> {value, changePct}
+let stockRotationIdx = 0;
+
+// Public CORS relays for GET requests. Tried in order; if one is down or
+// rate-limited, the next is used automatically instead of failing outright.
+const GET_PROXIES = [
+  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+  url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+  url => 'https://thingproxy.freeboard.io/fetch/' + url
+];
+async function fetchViaProxies(targetUrl, proxies){
+  let lastErr = null;
+  for(const build of proxies){
+    try{
+      const res = await fetch(build(targetUrl));
+      if(res.ok) return res;
+      lastErr = new Error('HTTP ' + res.status);
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('all proxies failed');
+}
+
+async function fetchStooq(){
+  const syms = ['^dji','^ixic','^spx','^bvsp','^ftse','^gdaxi','^fchi'];
+  const url = `https://stooq.com/q/l/?s=${syms.join(',')}&f=sd2t2ohlc&h&e=csv`;
+  try{
+    const r = await fetchViaProxies(url, GET_PROXIES);
+    const text = await r.text();
+    const lines = text.trim().split('\n');
+    lines.slice(1).forEach(line=>{
+      const cols = line.split(',');
+      const sym = cols[0].toLowerCase();
+      const open = parseFloat(cols[3]);
+      const close = parseFloat(cols[6]);
+      if(!isNaN(close)){
+        stockValues[sym] = { value: close, changePct: isNaN(open) || open===0 ? null : ((close-open)/open*100) };
+      }
+    });
+  }catch(e){ console.warn('stooq fetch failed', e); }
+}
+
+// Preferred path when a Financial Modeling Prep key is configured: real CORS
+// support, no proxy needed, so it's much more reliable than scraping stooq
+// through a public relay. Uses FMP's current /stable/ endpoint (the old
+// /api/v3/ path is now "Legacy" and may not be reachable on new free keys).
+async function fetchFMP(){
+  const symMap = { '^GSPC':'^spx', '^DJI':'^dji', '^IXIC':'^ixic', '^BVSP':'^bvsp', '^FTSE':'^ftse', '^GDAXI':'^gdaxi', '^FCHI':'^fchi' };
+  const fmpSyms = Object.keys(symMap).join(',');
+  const url = `https://financialmodelingprep.com/stable/quote?symbol=${encodeURIComponent(fmpSyms)}&apikey=${encodeURIComponent(CFG.stockApiKey)}`;
+  try{
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if(!Array.isArray(j)) throw new Error('resposta inesperada da API: ' + JSON.stringify(j).slice(0,120));
+    j.forEach(q=>{
+      const key = symMap[q.symbol];
+      if(key) stockValues[key] = { value: q.price, changePct: q.changesPercentage };
+    });
+    return true;
+  }catch(e){ console.warn('FMP fetch failed', e); return false; }
+}
+async function fetchBrData(){
+  try{
+    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const j = await r.json();
+    if(j.rates && j.rates.BRL){
+      stockValues['usdbrl'] = { value: j.rates.BRL, changePct: null };
+    }
+  }catch(e){}
+  try{
+    const r2 = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+    const j2 = await r2.json();
+    if(j2.bitcoin){
+      stockValues['btcusd'] = { value: j2.bitcoin.usd, changePct: j2.bitcoin.usd_24h_change };
+    }
+  }catch(e){}
+}
+function fmtStockValue(sym, val){
+  if(sym === 'usdbrl') return 'R$ ' + val.toFixed(2);
+  if(sym === 'btcusd') return '$' + Math.round(val).toLocaleString('pt-BR');
+  return val.toLocaleString('pt-BR', {maximumFractionDigits:2});
+}
+function renderStockCards(){
+  Object.entries({NY:'stockCardNY', BR:'stockCardBR', EU:'stockCardEU'}).forEach(([key, cardId])=>{
+    const group = STOCK_GROUPS[key];
+    const item = group.items[stockRotationIdx % group.items.length];
+    const data = stockValues[item.sym];
+    const card = document.getElementById(cardId);
+    const body = card.querySelector('.stock-body');
+    body.style.opacity = 0;
+    setTimeout(()=>{
+      if(!data){
+        body.innerHTML = `<span class="stock-name">${item.name}</span><span class="stock-value dim">indisponível</span>`;
+      }else{
+        const chg = data.changePct;
+        const chgClass = chg==null ? '' : (chg>=0 ? 'up':'down');
+        const chgTxt = chg==null ? '' : `<span class="stock-change ${chgClass}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>`;
+        body.innerHTML = `<span class="stock-name">${item.name}</span><span class="stock-value">${fmtStockValue(item.sym, data.value)}</span>${chgTxt}`;
+      }
+      body.style.opacity = 1;
+    }, 180);
+    const dots = card.querySelectorAll('.stock-dots span');
+    dots.forEach((d,i)=> d.classList.toggle('on', i === stockRotationIdx % group.items.length));
+  });
+}
+async function refreshStocks(){
+  let ok = false;
+  if(CFG.stockApiKey){ ok = await fetchFMP(); }
+  if(!ok){ await fetchStooq(); } // fallback: no key configured, or FMP call failed for any reason
+  await fetchBrData();
+  renderStockCards();
+}
+function rotateStocks(){
+  stockRotationIdx = (stockRotationIdx + 1) % 3;
+  renderStockCards();
+}
+
+/* ============================================================
+   NEWS ARTICLE READER (opens inside the card, with a back button)
+============================================================ */
+let NEWS_ITEMS = { PR: [], BR: [], World: [] };
+function sanitizeHtml(html){
+  const div = document.createElement('div');
+  div.innerHTML = html || '';
+  div.querySelectorAll('script,style,iframe,object,embed').forEach(el=>el.remove());
+  div.querySelectorAll('*').forEach(el=>{
+    [...el.attributes].forEach(attr=>{
+      if(attr.name.startsWith('on')) el.removeAttribute(attr.name);
+    });
+  });
+  return div.innerHTML;
+}
+function showArticle(col, idx){
+  const item = NEWS_ITEMS[col][idx];
+  if(!item) return;
+  const body = document.getElementById('newsArticleBody'+col);
+  const d = item.pubDate ? new Date(item.pubDate.replace(' ','T')) : null;
+  const thumb = item.thumbnail ? `<img src="${item.thumbnail}">` : '';
+  const contentHtml = sanitizeHtml(item.content || item.description || '<p>Sem conteúdo disponível.</p>');
+  body.innerHTML = `
+    <h4>${item.title}</h4>
+    <div class="art-meta">${d ? fmtDateLong(d)+' · '+fmtTime(d) : ''}</div>
+    ${thumb}
+    ${contentHtml}
+    <a class="src-link" href="${item.link}" target="_blank" rel="noopener">Ler no site original ↗</a>
+  `;
+  document.getElementById('newsCol'+col).classList.add('reading');
+  document.getElementById('newsArticle'+col).classList.add('on');
+}
+function hideArticle(col){
+  document.getElementById('newsCol'+col).classList.remove('reading');
+  document.getElementById('newsArticle'+col).classList.remove('on');
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+async function init(){
+  await handleSpotifyRedirect();
+  loadWeather();
+  loadNews();
+  loadPhotos();
+  setupAutoRotate();
+  pollSpotify();
+  refreshStocks();
+  setInterval(loadWeather, 10*60*1000);
+  setInterval(loadNews, 8*60*1000);
+  setInterval(pollSpotify, 5*1000);
+  setInterval(refreshStocks, 6*60*1000); // ~240 calls/day, safely under FMP's free 250/day cap
+  setInterval(rotateStocks, 30*1000);
+}
+init();
+</script>
+</body>
+</html>
