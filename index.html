@@ -117,9 +117,31 @@
   .stock-change{font-family:var(--font-num); font-size:12px; font-weight:700;}
   .stock-change.up{color:var(--mint);}
   .stock-change.down{color:var(--red);}
+  .stock-eod{font-size:8px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; align-self:center;}
   .stock-dots{position:absolute; right:10px; bottom:8px; display:flex; gap:4px;}
   .stock-dots span{width:4px; height:4px; border-radius:50%; background:var(--line);}
   .stock-dots span.on{background:var(--orange);}
+
+  /* --- brapi detail card --- */
+  .brapi-card{padding:14px 16px 12px; flex-shrink:0;}
+  .brapi-top{display:flex; justify-content:space-between; align-items:flex-start;}
+  .brapi-symbol{font-family:var(--font-num); font-size:18px; font-weight:700; color:var(--text);}
+  .brapi-name{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .brapi-dots{display:flex; gap:4px; padding-top:3px;}
+  .brapi-dots span{width:4px; height:4px; border-radius:50%; background:var(--line);}
+  .brapi-dots span.on{background:var(--orange);}
+  .brapi-price-row{display:flex; align-items:baseline; gap:12px; margin:6px 0 12px;}
+  .brapi-price{font-family:var(--font-num); font-size:34px; font-weight:700; color:var(--text);}
+  .brapi-change{font-family:var(--font-num); font-size:14px; font-weight:700;}
+  .brapi-change.up{color:var(--mint);}
+  .brapi-change.down{color:var(--red);}
+  .brapi-stats{display:flex; gap:10px;}
+  .brapi-stat{
+    flex:1; min-width:0; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px;
+  }
+  .bs-label{font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px;}
+  .bs-value{font-family:var(--font-num); font-size:13px; font-weight:700; color:var(--text);}
 
   /* --- news columns --- */
   .news-cols{display:flex; gap:10px; flex:1; min-height:0;}
@@ -292,19 +314,39 @@
     <div class="screen active" id="screen-news">
       <div class="row stocks-row">
         <div class="card stock-card" id="stockCardNY">
-          <div class="stock-label">Nova York</div>
+          <div class="stock-label">Bolsa de Valores</div>
           <div class="stock-body"><span class="stock-value dim">--</span></div>
-          <div class="stock-dots"><span class="on"></span><span></span><span></span></div>
+          <div class="stock-dots" id="dotsNY"></div>
         </div>
         <div class="card stock-card" id="stockCardBR">
-          <div class="stock-label">Ibovespa</div>
+          <div class="stock-label">Moedas</div>
           <div class="stock-body"><span class="stock-value dim">--</span></div>
-          <div class="stock-dots"><span class="on"></span><span></span><span></span></div>
+          <div class="stock-dots" id="dotsBR"></div>
         </div>
         <div class="card stock-card" id="stockCardEU">
-          <div class="stock-label">Europa</div>
+          <div class="stock-label">Ações</div>
           <div class="stock-body"><span class="stock-value dim">--</span></div>
-          <div class="stock-dots"><span class="on"></span><span></span><span></span></div>
+          <div class="stock-dots" id="dotsEU"></div>
+        </div>
+      </div>
+
+      <div class="card brapi-card" id="brapiCard">
+        <div class="brapi-top">
+          <div>
+            <div class="brapi-symbol" id="brapiSymbol">--</div>
+            <div class="brapi-name" id="brapiName">carregando…</div>
+          </div>
+          <div class="brapi-dots" id="brapiDots"></div>
+        </div>
+        <div class="brapi-price-row">
+          <span class="brapi-price" id="brapiPrice">R$ --</span>
+          <span class="brapi-change" id="brapiChange"></span>
+        </div>
+        <div class="brapi-stats">
+          <div class="brapi-stat"><div class="bs-label">Máxima</div><div class="bs-value" id="brapiHigh">--</div></div>
+          <div class="brapi-stat"><div class="bs-label">Mínima</div><div class="bs-value" id="brapiLow">--</div></div>
+          <div class="brapi-stat"><div class="bs-label">Volume</div><div class="bs-value" id="brapiVolume">--</div></div>
+          <div class="brapi-stat"><div class="bs-label">Market Cap</div><div class="bs-value" id="brapiMarketCap">--</div></div>
         </div>
       </div>
 
@@ -437,8 +479,17 @@
         <input id="cfgStockApiKey" type="text" placeholder="cole aqui sua chave grátis">
       </label>
       <div class="help">
-        Sem essa chave, o painel tenta buscar as cotações via proxies públicos gratuitos, que podem falhar de vez em quando. Com a chave, os dados vêm direto e são bem mais estáveis.<br>
+        Sem essa chave, o painel tenta buscar as cotações via proxies públicos gratuitos, que podem falhar de vez em quando. Com a chave, os dados vêm direto, sem depender de proxy — mas o plano grátis da FMP só libera o <b>fechamento do dia anterior</b> dos índices, não cotação ao vivo durante o pregão (por isso o card mostra a data do fechamento em vez da hora). Para valores em tempo real seria preciso um plano pago da FMP.<br>
         Crie uma conta grátis em <b>site.financialmodelingprep.com/developer/docs/pricing</b> (plano Free), copie a "API Key" e cole aqui.
+      </div>
+      <label>Token brapi.dev (opcional) — para Sabesp, Copel, Furukawa e Ibovespa
+        <input id="cfgBrapiToken" type="text" placeholder="cole aqui seu token grátis (opcional)">
+      </label>
+      <label>URL do proxy Cloudflare Worker (recomendado)
+        <input id="cfgBrapiProxyUrl" type="text" placeholder="https://seu-worker.workers.dev">
+      </label>
+      <div class="help">
+        A brapi.dev não libera chamadas diretas do navegador (recomendam uso só via backend). Por isso, o ideal é usar um pequeno proxy grátis na Cloudflare, que guarda seu token com segurança do lado do servidor — veja o arquivo <b>brapi-proxy-worker.js</b> e o passo a passo de publicação. Cole aqui a URL do Worker depois de publicado. Sem essa URL, o painel tenta chamar a brapi.dev direto (só funciona para PETR4, e mesmo assim pode falhar).
       </div>
       <label>Girar telas automaticamente
         <select id="cfgAutoRotate">
@@ -516,7 +567,9 @@ const DEFAULTS = {
   photoList: "",
   photoInterval: "15",
   spotifyClientId: "",
-  stockApiKey: ""
+  stockApiKey: "",
+  brapiToken: "",
+  brapiProxyUrl: ""
 };
 
 function loadCfg(){
@@ -549,6 +602,8 @@ function openSettings(){
   document.getElementById('cfgRssBR').value = CFG.rssBR;
   document.getElementById('cfgRssWorld').value = CFG.rssWorld;
   document.getElementById('cfgStockApiKey').value = CFG.stockApiKey;
+  document.getElementById('cfgBrapiToken').value = CFG.brapiToken;
+  document.getElementById('cfgBrapiProxyUrl').value = CFG.brapiProxyUrl;
   document.getElementById('cfgAutoRotate').value = CFG.autoRotate;
   document.getElementById('cfgIcloudUrl').value = CFG.icloudUrl;
   document.getElementById('cfgPhotoList').value = CFG.photoList;
@@ -567,6 +622,8 @@ function saveSettings(){
   CFG.rssBR = document.getElementById('cfgRssBR').value || DEFAULTS.rssBR;
   CFG.rssWorld = document.getElementById('cfgRssWorld').value || DEFAULTS.rssWorld;
   CFG.stockApiKey = document.getElementById('cfgStockApiKey').value.trim();
+  CFG.brapiToken = document.getElementById('cfgBrapiToken').value.trim();
+  CFG.brapiProxyUrl = document.getElementById('cfgBrapiProxyUrl').value.trim().replace(/\/$/, '');
   CFG.autoRotate = document.getElementById('cfgAutoRotate').value;
   CFG.icloudUrl = document.getElementById('cfgIcloudUrl').value.trim();
   CFG.photoList = document.getElementById('cfgPhotoList').value;
@@ -988,21 +1045,38 @@ async function spotifyControl(action){
 }
 
 /* ============================================================
-   MARKET CARDS (Nova York, Ibovespa, Europa) — stooq via CORS relay
-   plus USD/BRL and Bitcoin from no-key, CORS-friendly APIs.
+   MARKET CARDS
+   Card 1 "Bolsa de Valores": Dow Jones, Nasdaq, Ibovespa
+   Card 2 "Moedas": Dólar, Bitcoin, Ethereum, Euro, Libra
+   Card 3 "Ações": Apple, Nvidia, Furukawa, S&P 500, DAX, Petrobras, Sabesp, Copel
+
+   Indices/stocks use a hybrid strategy: try Financial Modeling Prep's
+   end-of-day endpoint first (reliable, but FMP's free plan only covers
+   US-listed symbols — confirmed via "Restricted Endpoint" on non-US ones),
+   then fall back to stooq (via a public CORS relay) for anything FMP
+   couldn't provide, which is how non-US indices/stocks (Ibovespa, DAX,
+   Petrobras, Sabesp, Copel, Furukawa) get filled in.
 ============================================================ */
-const STOCK_GROUPS = {
-  NY: { label:'Nova York', items:[
-    {sym:'^dji', name:'Dow Jones'}, {sym:'^ixic', name:'Nasdaq'}, {sym:'^spx', name:'S&P 500'}
-  ]},
-  BR: { label:'Ibovespa', items:[
-    {sym:'^bvsp', name:'Ibovespa'}, {sym:'usdbrl', name:'Dólar'}, {sym:'btcusd', name:'Bitcoin'}
-  ]},
-  EU: { label:'Europa', items:[
-    {sym:'^ftse', name:'FTSE 100'}, {sym:'^gdaxi', name:'DAX'}, {sym:'^fchi', name:'CAC 40'}
-  ]}
+const INSTRUMENTS = {
+  dji:   { name:'Dow Jones',  fmp:'^DJI',   stooq:'^dji',    fmt:'index', source:'fmp_stooq' },
+  ixic:  { name:'Nasdaq',     fmp:'^IXIC',  stooq:'^ixic',   fmt:'index', source:'fmp_stooq' },
+  gspc:  { name:'S&P 500',    fmp:'^GSPC',  stooq:'^spx',    fmt:'index', source:'fmp_stooq' },
+  aapl:  { name:'Apple',      fmp:'AAPL',   stooq:'aapl.us', fmt:'usd',   source:'fmp_stooq' },
+  nvda:  { name:'Nvidia',     fmp:'NVDA',   stooq:'nvda.us', fmt:'usd',   source:'fmp_stooq' },
+  // Brazilian index/stocks: FMP's free plan and stooq don't reliably cover B3,
+  // so these come from brapi.dev instead (a free API dedicated to B3 data).
+  bvsp:  { name:'Ibovespa',   brapi:'^BVSP', fmt:'index', source:'brapi' },
+  fesa4: { name:'Furukawa',   brapi:'FESA4', fmt:'brl',   source:'brapi' },
+  petr4: { name:'PETR4',      brapi:'PETR4', fmt:'brl',   source:'brapi' },
+  sapr4: { name:'SAPR4',      brapi:'SAPR4', fmt:'brl',   source:'brapi' },
+  cple6: { name:'CPLE6',      brapi:'CPLE6', fmt:'brl',   source:'brapi' }
 };
-let stockValues = {}; // sym -> {value, changePct}
+const CARD_DEFS = {
+  NY: { ids:['dji','ixic','bvsp'] },
+  BR: { ids:['usdbrl','btc','eth','eurbrl','gbpbrl'] },
+  EU: { ids:['aapl','nvda','fesa4','gspc','petr4','sapr4','cple6'] }
+};
+let stockValues = {}; // id -> {value, changePct, eod}
 let stockRotationIdx = 0;
 
 // Public CORS relays for GET requests. Tried in order; if one is down or
@@ -1024,105 +1098,256 @@ async function fetchViaProxies(targetUrl, proxies){
   throw lastErr || new Error('all proxies failed');
 }
 
-async function fetchStooq(){
-  const syms = ['^dji','^ixic','^spx','^bvsp','^ftse','^gdaxi','^fchi'];
-  const url = `https://stooq.com/q/l/?s=${syms.join(',')}&f=sd2t2ohlc&h&e=csv`;
-  try{
-    const r = await fetchViaProxies(url, GET_PROXIES);
-    const text = await r.text();
-    const lines = text.trim().split('\n');
-    lines.slice(1).forEach(line=>{
-      const cols = line.split(',');
-      const sym = cols[0].toLowerCase();
-      const open = parseFloat(cols[3]);
-      const close = parseFloat(cols[6]);
-      if(!isNaN(close)){
-        stockValues[sym] = { value: close, changePct: isNaN(open) || open===0 ? null : ((close-open)/open*100) };
-      }
-    });
-  }catch(e){ console.warn('stooq fetch failed', e); }
+async function fetchIndexStockData(){
+  const allIds = Object.keys(INSTRUMENTS).filter(id => INSTRUMENTS[id].source === 'fmp_stooq');
+  const needStooq = [];
+  if(CFG.stockApiKey){
+    await Promise.all(allIds.map(async id=>{
+      const def = INSTRUMENTS[id];
+      try{
+        const url = `https://financialmodelingprep.com/stable/historical-price-eod/light?symbol=${encodeURIComponent(def.fmp)}&apikey=${encodeURIComponent(CFG.stockApiKey)}`;
+        const r = await fetch(url);
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        if(!Array.isArray(j) || !j.length || typeof j[0].price !== 'number') throw new Error('sem dados');
+        const chg = (j[1] && j[1].price) ? ((j[0].price - j[1].price) / j[1].price * 100) : null;
+        stockValues[id] = { value: j[0].price, changePct: chg, eod: true, eodDate: j[0].date || null };
+      }catch(e){ needStooq.push(id); } // FMP free plan doesn't cover this symbol (or no key) — try stooq instead
+    }));
+  }else{
+    needStooq.push(...allIds);
+  }
+  if(needStooq.length){
+    try{
+      const syms = needStooq.map(id=>INSTRUMENTS[id].stooq);
+      const url = `https://stooq.com/q/l/?s=${syms.join(',')}&f=sd2t2ohlc&h&e=csv`;
+      const r = await fetchViaProxies(url, GET_PROXIES);
+      const text = await r.text();
+      const lines = text.trim().split('\n');
+      lines.slice(1).forEach((line, idx)=>{
+        const cols = line.split(',');
+        const open = parseFloat(cols[3]);
+        const close = parseFloat(cols[6]);
+        const id = needStooq[idx];
+        if(id && !isNaN(close)){
+          stockValues[id] = { value: close, changePct: (!isNaN(open) && open!==0) ? ((close-open)/open*100) : null, eod:false };
+        }
+      });
+    }catch(e){ console.warn('stooq fallback failed', e); }
+  }
 }
 
-// Preferred path when a Financial Modeling Prep key is configured: real CORS
-// support, no proxy needed, so it's much more reliable than scraping stooq
-// through a public relay. Indices live on FMP's dedicated batch-index-quotes
-// endpoint (the plain /stable/quote endpoint is for individual stocks/ETFs,
-// not indices, and returns nothing useful for symbols like ^GSPC).
-async function fetchFMP(){
-  const symMap = { '^GSPC':'^spx', '^DJI':'^dji', '^IXIC':'^ixic', '^BVSP':'^bvsp', '^FTSE':'^ftse', '^GDAXI':'^gdaxi', '^FCHI':'^fchi' };
-  const url = `https://financialmodelingprep.com/stable/batch-index-quotes?apikey=${encodeURIComponent(CFG.stockApiKey)}`;
-  try{
-    const r = await fetch(url);
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    if(!Array.isArray(j)) throw new Error('resposta inesperada da API: ' + JSON.stringify(j).slice(0,120));
-    let matched = 0;
-    j.forEach(q=>{
-      const key = symMap[q.symbol];
-      if(key){
-        const chg = (q.changesPercentage != null) ? q.changesPercentage : (q.changePercentage != null ? q.changePercentage : null);
-        stockValues[key] = { value: q.price, changePct: chg };
-        matched++;
-      }
-    });
-    if(matched === 0) throw new Error('nenhum símbolo esperado encontrado na resposta');
-    return true;
-  }catch(e){ console.warn('FMP fetch failed', e); return false; }
+// Brazilian index/stocks via brapi.dev (dedicated free B3 API). PETR4 works
+// with no token at all; the other symbols need a free brapi.dev token.
+//
+// /**
+//  * Fetches a batch of B3 stock quotes from brapi.dev's v2 endpoint.
+//  * @param {string[]} symbols - B3 tickers, e.g. ['PETR4','SAPR4']
+//  * @param {string|null} token - brapi.dev API token, or null for the
+//  *   no-auth sandbox (only works for the 4 free test tickers, and only
+//  *   when requested alone — see fetchBrapiData for the caller-side logic).
+//  * @returns {Promise<Array<{symbol:string, data:object}>>} results[] entries
+//  * @throws {Error} on any non-2xx HTTP response
+//  */
+async function fetchBrapiQuoteV2(symbols, token){
+  const url = `https://brapi.dev/api/v2/stocks/quote?symbols=${encodeURIComponent(symbols.join(','))}`;
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const r = await fetch(url, { headers });
+  if(!r.ok) throw new Error('brapi HTTP ' + r.status);
+  const j = await r.json();
+  if(!Array.isArray(j.results)) throw new Error('brapi: resposta sem "results"');
+  return j.results; // each entry: { requestedSymbol, symbol, data: {...} }
 }
-async function fetchBrData(){
+// Older v1 endpoint (token as query string) kept as a fallback: the v2
+// endpoint's docs note the Authorization header is meant for backend use,
+// so it may not carry CORS headers for direct browser calls — if v2 fails
+// (network/CORS error), this simpler GET is more likely to work from a
+// static, no-backend page like this one.
+async function fetchBrapiQuoteV1(symbols, token){
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+  const r = await fetch(`https://brapi.dev/api/quote/${symbols.join(',')}${tokenParam}`);
+  if(!r.ok) throw new Error('brapi HTTP ' + r.status);
+  const j = await r.json();
+  if(!Array.isArray(j.results)) throw new Error('brapi: resposta sem "results"');
+  // normalize to the same {symbol, data} shape v2 uses
+  return j.results.map(q => ({ symbol: q.symbol, data: q }));
+}
+// Fetches through our own Cloudflare Worker proxy, which holds the brapi
+// token server-side (see brapi-proxy-worker.js). Preferred path when
+// configured, since brapi.dev itself appears to block direct browser CORS
+// requests regardless of endpoint version or auth method.
+async function fetchBrapiViaProxy(symbols, proxyUrl){
+  const url = `${proxyUrl}${proxyUrl.includes('?') ? '&' : '?'}symbols=${encodeURIComponent(symbols.join(','))}`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('proxy HTTP ' + r.status);
+  const j = await r.json();
+  if(!Array.isArray(j.results)) throw new Error('proxy: resposta sem "results"');
+  return j.results;
+}
+async function fetchBrapiData(){
+  const idMap = { 'PETR4':'petr4', 'SAPR4':'sapr4', 'CPLE6':'cple6', 'FESA4':'fesa4', '^BVSP':'bvsp' };
+  const hasProxy = !!CFG.brapiProxyUrl;
+  const hasToken = !!CFG.brapiToken;
+  const symbols = (hasProxy || hasToken) ? Object.keys(idMap) : ['PETR4'];
+  let results = [];
+  if(hasProxy){
+    try{
+      results = await fetchBrapiViaProxy(symbols, CFG.brapiProxyUrl);
+    }catch(e){ console.warn('brapi proxy fetch failed', e); }
+  }
+  if(!results.length){
+    // Fallback: call brapi.dev directly. This is likely to fail from a
+    // browser (brapi's own docs recommend backend-only usage), but costs
+    // nothing to attempt if no proxy is configured yet.
+    try{
+      results = await fetchBrapiQuoteV2(symbols, hasToken ? CFG.brapiToken : null);
+    }catch(e){
+      console.warn('brapi v2 fetch failed, falling back to v1', e);
+      try{ results = await fetchBrapiQuoteV1(symbols, hasToken ? CFG.brapiToken : null); }
+      catch(e2){ console.warn('brapi v1 fallback also failed', e2); return; }
+    }
+  }
+  results.forEach(item=>{
+    const id = idMap[item.symbol];
+    const d = item.data;
+    if(id && d && typeof d.regularMarketPrice === 'number'){
+      stockValues[id] = {
+        value: d.regularMarketPrice,
+        changePct: d.regularMarketChangePercent,
+        eod: false,
+        name: d.shortName || null,
+        high: d.regularMarketDayHigh ?? null,
+        low: d.regularMarketDayLow ?? null,
+        volume: d.regularMarketVolume ?? null,
+        marketCap: d.marketCap ?? null
+      };
+    }
+  });
+}
+
+async function fetchCurrenciesAndCrypto(){
   try{
     const r = await fetch('https://open.er-api.com/v6/latest/USD');
     const j = await r.json();
     if(j.rates && j.rates.BRL){
-      stockValues['usdbrl'] = { value: j.rates.BRL, changePct: null };
+      const usdbrl = j.rates.BRL;
+      stockValues['usdbrl'] = { value: usdbrl, changePct: null };
+      if(j.rates.EUR) stockValues['eurbrl'] = { value: usdbrl / j.rates.EUR, changePct: null };
+      if(j.rates.GBP) stockValues['gbpbrl'] = { value: usdbrl / j.rates.GBP, changePct: null };
     }
   }catch(e){}
   try{
-    const r2 = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+    const r2 = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true');
     const j2 = await r2.json();
-    if(j2.bitcoin){
-      stockValues['btcusd'] = { value: j2.bitcoin.usd, changePct: j2.bitcoin.usd_24h_change };
-    }
+    if(j2.bitcoin) stockValues['btc'] = { value: j2.bitcoin.usd, changePct: j2.bitcoin.usd_24h_change };
+    if(j2.ethereum) stockValues['eth'] = { value: j2.ethereum.usd, changePct: j2.ethereum.usd_24h_change };
   }catch(e){}
 }
-function fmtStockValue(sym, val){
-  if(sym === 'usdbrl') return 'R$ ' + val.toFixed(2);
-  if(sym === 'btcusd') return '$' + Math.round(val).toLocaleString('pt-BR');
+// pt-BR uses comma as the decimal separator (e.g. "R$ 6,04"), so BRL/USD
+// amounts use toLocaleString instead of toFixed (which always uses '.').
+function fmtStockValue(id, val){
+  if(id === 'usdbrl' || id === 'eurbrl' || id === 'gbpbrl'){
+    return 'R$ ' + val.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  if(id === 'btc' || id === 'eth') return '$' + Math.round(val).toLocaleString('pt-BR');
+  const def = INSTRUMENTS[id];
+  if(def && def.fmt === 'brl') return 'R$ ' + val.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if(def && def.fmt === 'usd') return '$' + val.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   return val.toLocaleString('pt-BR', {maximumFractionDigits:2});
+}
+function fmtEodDate(isoDate){
+  if(!isoDate) return '--/--/----';
+  const parts = String(isoDate).slice(0,10).split('-'); // 'YYYY-MM-DD' -> ['YYYY','MM','DD']
+  if(parts.length !== 3) return isoDate;
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
+}
+function instrumentName(id){
+  const names = { usdbrl:'Dólar', btc:'Bitcoin', eth:'Ethereum', eurbrl:'Euro', gbpbrl:'Libra' };
+  return names[id] || (INSTRUMENTS[id] ? INSTRUMENTS[id].name : id);
 }
 function renderStockCards(){
   Object.entries({NY:'stockCardNY', BR:'stockCardBR', EU:'stockCardEU'}).forEach(([key, cardId])=>{
-    const group = STOCK_GROUPS[key];
-    const item = group.items[stockRotationIdx % group.items.length];
-    const data = stockValues[item.sym];
+    const ids = CARD_DEFS[key].ids;
+    const idx = stockRotationIdx % ids.length;
+    const id = ids[idx];
+    const data = stockValues[id];
     const card = document.getElementById(cardId);
     const body = card.querySelector('.stock-body');
     body.style.opacity = 0;
     setTimeout(()=>{
       if(!data){
-        body.innerHTML = `<span class="stock-name">${item.name}</span><span class="stock-value dim">indisponível</span>`;
+        body.innerHTML = `<span class="stock-name">${instrumentName(id)}</span><span class="stock-value dim">indisponível</span>`;
       }else{
         const chg = data.changePct;
         const chgClass = chg==null ? '' : (chg>=0 ? 'up':'down');
-        const chgTxt = chg==null ? '' : `<span class="stock-change ${chgClass}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>`;
-        body.innerHTML = `<span class="stock-name">${item.name}</span><span class="stock-value">${fmtStockValue(item.sym, data.value)}</span>${chgTxt}`;
+        const chgTxt = chg==null ? '' : `<span class="stock-change ${chgClass}">${chg>=0?'+':''}${chg.toFixed(2).replace('.',',')}%</span>`;
+        const eodTag = data.eod ? `<span class="stock-eod">${fmtEodDate(data.eodDate)}</span>` : '';
+        body.innerHTML = `<span class="stock-name">${instrumentName(id)}</span><span class="stock-value">${fmtStockValue(id, data.value)}</span>${chgTxt}${eodTag}`;
       }
       body.style.opacity = 1;
     }, 180);
-    const dots = card.querySelectorAll('.stock-dots span');
-    dots.forEach((d,i)=> d.classList.toggle('on', i === stockRotationIdx % group.items.length));
+    const dotsWrap = document.getElementById('dots'+key);
+    dotsWrap.innerHTML = ids.map((_,i)=> `<span class="${i===idx?'on':''}"></span>`).join('');
   });
 }
+const BRAPI_CARD_IDS = ['bvsp','petr4','sapr4','cple6','fesa4'];
+function fmtVolumeCompact(n){
+  if(n == null) return '--';
+  if(n >= 1e9) return (n/1e9).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' bi';
+  if(n >= 1e6) return (n/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mi';
+  if(n >= 1e3) return (n/1e3).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mil';
+  return n.toLocaleString('pt-BR');
+}
+function renderBrapiCard(){
+  const idx = stockRotationIdx % BRAPI_CARD_IDS.length;
+  const id = BRAPI_CARD_IDS[idx];
+  const data = stockValues[id];
+  const def = INSTRUMENTS[id];
+  const card = document.getElementById('brapiCard');
+  card.style.opacity = 0;
+  setTimeout(()=>{
+    document.getElementById('brapiSymbol').textContent = def ? def.name.toUpperCase() : id.toUpperCase();
+    if(!data){
+      document.getElementById('brapiName').textContent = 'indisponível';
+      document.getElementById('brapiPrice').textContent = '--';
+      document.getElementById('brapiChange').textContent = '';
+      document.getElementById('brapiHigh').textContent = '--';
+      document.getElementById('brapiLow').textContent = '--';
+      document.getElementById('brapiVolume').textContent = '--';
+      document.getElementById('brapiMarketCap').textContent = '--';
+    }else{
+      document.getElementById('brapiName').textContent = data.name || instrumentName(id);
+      document.getElementById('brapiPrice').textContent = fmtStockValue(id, data.value);
+      const chg = data.changePct;
+      const chgEl = document.getElementById('brapiChange');
+      if(chg == null){ chgEl.textContent = ''; }
+      else{
+        chgEl.className = 'brapi-change ' + (chg>=0?'up':'down');
+        chgEl.textContent = (chg>=0?'↗ +':'↘ ') + chg.toFixed(2).replace('.',',') + '%';
+      }
+      document.getElementById('brapiHigh').textContent = data.high!=null ? 'R$ ' + data.high.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '--';
+      document.getElementById('brapiLow').textContent = data.low!=null ? 'R$ ' + data.low.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '--';
+      document.getElementById('brapiVolume').textContent = fmtVolumeCompact(data.volume);
+      document.getElementById('brapiMarketCap').textContent = fmtVolumeCompact(data.marketCap);
+    }
+    card.style.opacity = 1;
+  }, 180);
+  document.getElementById('brapiDots').innerHTML = BRAPI_CARD_IDS.map((_,i)=> `<span class="${i===idx?'on':''}"></span>`).join('');
+}
+
 async function refreshStocks(){
-  let ok = false;
-  if(CFG.stockApiKey){ ok = await fetchFMP(); }
-  if(!ok){ await fetchStooq(); } // fallback: no key configured, or FMP call failed for any reason
-  await fetchBrData();
+  await fetchIndexStockData();
+  await fetchBrapiData();
+  await fetchCurrenciesAndCrypto();
   renderStockCards();
+  renderBrapiCard();
 }
 function rotateStocks(){
-  stockRotationIdx = (stockRotationIdx + 1) % 3;
+  const maxLen = Math.max(CARD_DEFS.NY.ids.length, CARD_DEFS.BR.ids.length, CARD_DEFS.EU.ids.length, BRAPI_CARD_IDS.length);
+  stockRotationIdx = (stockRotationIdx + 1) % maxLen;
   renderStockCards();
+  renderBrapiCard();
 }
 
 /* ============================================================
@@ -1176,7 +1401,7 @@ async function init(){
   setInterval(loadWeather, 10*60*1000);
   setInterval(loadNews, 8*60*1000);
   setInterval(pollSpotify, 5*1000);
-  setInterval(refreshStocks, 6*60*1000); // ~240 calls/day, safely under FMP's free 250/day cap
+  setInterval(refreshStocks, 45*60*1000); // EOD data barely changes intraday; ~150 calls/day, safely under FMP's free 250/day cap
   setInterval(rotateStocks, 30*1000);
 }
 init();
