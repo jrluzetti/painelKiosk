@@ -101,7 +101,7 @@
   .row.grow{flex:1; min-height:0;}
 
   /* --- stock cards --- */
-  .stocks-row{height:78px; flex-shrink:0;}
+  .stocks-row{height:94px; flex-shrink:0;}
   .stock-card{
     flex:1; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;
     padding:0; gap:0; position:relative; overflow:hidden;
@@ -111,14 +111,16 @@
     background:#070c0b; padding:6px 14px; border-bottom:1px solid var(--line); flex-shrink:0;
     text-align:center;
   }
-  .stock-body{display:flex; align-items:baseline; gap:10px; transition:opacity .3s ease; padding:8px 14px 0;}
-  .stock-name{font-size:12px; color:var(--text-dim); min-width:64px;}
-  .stock-value{font-family:var(--font-num); font-size:22px; font-weight:700; color:var(--text);}
+  .stock-body{display:flex; flex-direction:column; gap:2px; transition:opacity .3s ease; padding:7px 14px 0; min-width:0;}
+  .stock-body .stock-top-line{display:flex; align-items:baseline; gap:6px; min-width:0; flex-wrap:nowrap; overflow:hidden;}
+  .stock-name{font-size:11px; color:var(--text-dim); white-space:nowrap; flex-shrink:0;}
+  .stock-value{font-family:var(--font-num); font-size:20px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex-shrink:1;}
+  .stock-meta-row{display:flex; align-items:center; gap:10px; min-height:14px;}
   .stock-change{font-family:var(--font-num); font-size:12px; font-weight:700;}
   .stock-change.up{color:var(--mint);}
   .stock-change.down{color:var(--red);}
-  .stock-eod{font-size:8px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; align-self:center;}
-  .stock-dots{position:absolute; right:10px; bottom:8px; display:flex; gap:4px;}
+  .stock-eod{font-size:8px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px;}
+  .stock-dots{position:absolute; right:10px; bottom:6px; display:flex; gap:4px;}
   .stock-dots span{width:4px; height:4px; border-radius:50%; background:var(--line);}
   .stock-dots span.on{background:var(--orange);}
 
@@ -1069,12 +1071,12 @@ const INSTRUMENTS = {
   fesa4: { name:'Furukawa',   brapi:'FESA4', fmt:'brl',   source:'brapi' },
   petr4: { name:'PETR4',      brapi:'PETR4', fmt:'brl',   source:'brapi' },
   sapr4: { name:'SAPR4',      brapi:'SAPR4', fmt:'brl',   source:'brapi' },
-  cple6: { name:'CPLE6',      brapi:'CPLE6', fmt:'brl',   source:'brapi' }
+  cple3: { name:'CPLE3',      brapi:'CPLE3', fmt:'brl',   source:'brapi' }
 };
 const CARD_DEFS = {
   NY: { ids:['dji','ixic','bvsp'] },
   BR: { ids:['usdbrl','btc','eth','eurbrl','gbpbrl'] },
-  EU: { ids:['aapl','nvda','fesa4','gspc','petr4','sapr4','cple6'] }
+  EU: { ids:['aapl','nvda','fesa4','gspc','petr4','sapr4','cple3'] }
 };
 let stockValues = {}; // id -> {value, changePct, eod}
 let stockRotationIdx = 0;
@@ -1185,7 +1187,7 @@ async function fetchBrapiViaProxy(symbols, proxyUrl){
   return j.results;
 }
 async function fetchBrapiData(){
-  const idMap = { 'PETR4':'petr4', 'SAPR4':'sapr4', 'CPLE6':'cple6', 'FESA4':'fesa4', '^BVSP':'bvsp' };
+  const idMap = { 'PETR4':'petr4', 'SAPR4':'sapr4', 'CPLE3':'cple3', 'FESA4':'fesa4', '^BVSP':'bvsp' };
   const hasProxy = !!CFG.brapiProxyUrl;
   const hasToken = !!CFG.brapiToken;
   const symbols = (hasProxy || hasToken) ? Object.keys(idMap) : ['PETR4'];
@@ -1276,13 +1278,13 @@ function renderStockCards(){
     body.style.opacity = 0;
     setTimeout(()=>{
       if(!data){
-        body.innerHTML = `<span class="stock-name">${instrumentName(id)}</span><span class="stock-value dim">indisponível</span>`;
+        body.innerHTML = `<div class="stock-top-line"><span class="stock-name">${instrumentName(id)}</span><span class="stock-value dim">indisponível</span></div>`;
       }else{
         const chg = data.changePct;
         const chgClass = chg==null ? '' : (chg>=0 ? 'up':'down');
         const chgTxt = chg==null ? '' : `<span class="stock-change ${chgClass}">${chg>=0?'+':''}${chg.toFixed(2).replace('.',',')}%</span>`;
         const eodTag = data.eod ? `<span class="stock-eod">${fmtEodDate(data.eodDate)}</span>` : '';
-        body.innerHTML = `<span class="stock-name">${instrumentName(id)}</span><span class="stock-value">${fmtStockValue(id, data.value)}</span>${chgTxt}${eodTag}`;
+        body.innerHTML = `<div class="stock-top-line"><span class="stock-name">${instrumentName(id)}</span><span class="stock-value">${fmtStockValue(id, data.value)}</span></div><div class="stock-meta-row">${chgTxt}${eodTag}</div>`;
       }
       body.style.opacity = 1;
     }, 180);
@@ -1290,7 +1292,7 @@ function renderStockCards(){
     dotsWrap.innerHTML = ids.map((_,i)=> `<span class="${i===idx?'on':''}"></span>`).join('');
   });
 }
-const BRAPI_CARD_IDS = ['bvsp','petr4','sapr4','cple6','fesa4'];
+const BRAPI_CARD_IDS = ['bvsp','petr4','sapr4','cple3','fesa4'];
 function fmtVolumeCompact(n){
   if(n == null) return '--';
   if(n >= 1e9) return (n/1e9).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' bi';
