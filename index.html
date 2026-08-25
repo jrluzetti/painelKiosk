@@ -1268,12 +1268,16 @@ function fmtStockValue(id, val){
   if(def && def.fmt === 'usd') return '$' + val.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   return val.toLocaleString('pt-BR', {maximumFractionDigits:2});
 }
-function fmtEodDate(isoDate){
-  if(!isoDate) return '--/--/----';
-  const parts = String(isoDate).slice(0,10).split('-'); // 'YYYY-MM-DD' -> ['YYYY','MM','DD']
-  if(parts.length !== 3) return isoDate;
-  const [y, m, d] = parts;
-  return `${d}/${m}/${y}`;
+// The date shown next to EOD values is computed as "yesterday" relative to
+// the device's own clock, rather than trusting whatever date field FMP's
+// free plan returns (which can lag behind and look stuck on one date).
+function fmtEodDate(){
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 function instrumentName(id){
   const names = { usdbrl:'Dólar', btc:'Bitcoin', eth:'Ethereum', eurbrl:'Euro', gbpbrl:'Libra' };
@@ -1300,7 +1304,7 @@ function renderStockCards(){
         const chg = data.changePct;
         const chgClass = chg==null ? '' : (chg>=0 ? 'up':'down');
         const chgTxt = chg==null ? '' : `${chg>=0?'+':''}${chg.toFixed(2).replace('.',',')}%`;
-        const eodTag = data.eod ? `<span class="stock-eod">${fmtEodDate(data.eodDate)}</span>` : '';
+        const eodTag = data.eod ? `<span class="stock-eod">${fmtEodDate()}</span>` : '';
         body.innerHTML = `${nameLine}${tickerLine}<div class="stock-value">${fmtStockValue(id, data.value)}</div><div class="stock-change-line ${chgClass}">${chgTxt}${eodTag}</div>`;
       }
       body.style.opacity = 1;
