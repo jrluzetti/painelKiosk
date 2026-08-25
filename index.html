@@ -101,7 +101,7 @@
   .row.grow{flex:1; min-height:0;}
 
   /* --- stock cards --- */
-  .stocks-row{height:94px; flex-shrink:0;}
+  .stocks-row{height:112px; flex-shrink:0;}
   .stock-card{
     flex:1; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;
     padding:0; gap:0; position:relative; overflow:hidden;
@@ -111,15 +111,27 @@
     background:#070c0b; padding:6px 14px; border-bottom:1px solid var(--line); flex-shrink:0;
     text-align:center;
   }
-  .stock-body{display:flex; flex-direction:column; gap:2px; transition:opacity .3s ease; padding:7px 14px 0; min-width:0;}
-  .stock-body .stock-top-line{display:flex; align-items:baseline; gap:6px; min-width:0; flex-wrap:nowrap; overflow:hidden;}
-  .stock-name{font-size:11px; color:var(--text-dim); white-space:nowrap; flex-shrink:0;}
-  .stock-value{font-family:var(--font-num); font-size:20px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex-shrink:1;}
-  .stock-meta-row{display:flex; align-items:center; gap:10px; min-height:14px;}
-  .stock-change{font-family:var(--font-num); font-size:12px; font-weight:700;}
-  .stock-change.up{color:var(--mint);}
-  .stock-change.down{color:var(--red);}
-  .stock-eod{font-size:8px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px;}
+  .stock-body{display:flex; flex-direction:column; gap:1px; transition:opacity .3s ease; padding:8px 14px 6px; min-width:0;}
+  .stock-name{
+    font-size:12px; color:var(--text-dim); white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; line-height:1.3;
+  }
+  .stock-ticker{
+    font-family:var(--font-num); font-size:9px; color:var(--text-dim); opacity:.7;
+    letter-spacing:.5px; line-height:1.3; height:11px;
+  }
+  .stock-value{
+    font-family:var(--font-num); font-size:19px; font-weight:700; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+    line-height:1.25; margin-top:1px;
+  }
+  .stock-change-line{
+    font-family:var(--font-num); font-size:11px; font-weight:700; text-align:right;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-height:14px; margin-top:1px;
+  }
+  .stock-change-line.up{color:var(--mint);}
+  .stock-change-line.down{color:var(--red);}
+  .stock-change-line .stock-eod{color:var(--text-dim); font-weight:400; margin-left:6px;}
   .stock-dots{position:absolute; right:10px; bottom:6px; display:flex; gap:4px;}
   .stock-dots span{width:4px; height:4px; border-radius:50%; background:var(--line);}
   .stock-dots span.on{background:var(--orange);}
@@ -1069,9 +1081,9 @@ const INSTRUMENTS = {
   // so these come from brapi.dev instead (a free API dedicated to B3 data).
   bvsp:  { name:'Ibovespa',   brapi:'^BVSP', fmt:'index', source:'brapi' },
   fesa4: { name:'Furukawa',   brapi:'FESA4', fmt:'brl',   source:'brapi' },
-  petr4: { name:'PETR4',      brapi:'PETR4', fmt:'brl',   source:'brapi' },
-  sapr4: { name:'SAPR4',      brapi:'SAPR4', fmt:'brl',   source:'brapi' },
-  cple3: { name:'CPLE3',      brapi:'CPLE3', fmt:'brl',   source:'brapi' }
+  petr4: { name:'Petrobras',  ticker:'PETR4', brapi:'PETR4', fmt:'brl', source:'brapi' },
+  sapr4: { name:'Sabesp',     ticker:'SAPR4', brapi:'SAPR4', fmt:'brl', source:'brapi' },
+  cple3: { name:'Copel',      ticker:'CPLE3', brapi:'CPLE3', fmt:'brl', source:'brapi' }
 };
 const CARD_DEFS = {
   NY: { ids:['dji','ixic','bvsp'] },
@@ -1267,6 +1279,9 @@ function instrumentName(id){
   const names = { usdbrl:'Dólar', btc:'Bitcoin', eth:'Ethereum', eurbrl:'Euro', gbpbrl:'Libra' };
   return names[id] || (INSTRUMENTS[id] ? INSTRUMENTS[id].name : id);
 }
+function instrumentTicker(id){
+  return INSTRUMENTS[id] && INSTRUMENTS[id].ticker ? INSTRUMENTS[id].ticker : '';
+}
 function renderStockCards(){
   Object.entries({NY:'stockCardNY', BR:'stockCardBR', EU:'stockCardEU'}).forEach(([key, cardId])=>{
     const ids = CARD_DEFS[key].ids;
@@ -1277,14 +1292,16 @@ function renderStockCards(){
     const body = card.querySelector('.stock-body');
     body.style.opacity = 0;
     setTimeout(()=>{
+      const nameLine = `<div class="stock-name">${instrumentName(id)}</div>`;
+      const tickerLine = `<div class="stock-ticker">${instrumentTicker(id)}</div>`;
       if(!data){
-        body.innerHTML = `<div class="stock-top-line"><span class="stock-name">${instrumentName(id)}</span><span class="stock-value dim">indisponível</span></div>`;
+        body.innerHTML = `${nameLine}${tickerLine}<div class="stock-value dim">indisponível</div><div class="stock-change-line"></div>`;
       }else{
         const chg = data.changePct;
         const chgClass = chg==null ? '' : (chg>=0 ? 'up':'down');
-        const chgTxt = chg==null ? '' : `<span class="stock-change ${chgClass}">${chg>=0?'+':''}${chg.toFixed(2).replace('.',',')}%</span>`;
+        const chgTxt = chg==null ? '' : `${chg>=0?'+':''}${chg.toFixed(2).replace('.',',')}%`;
         const eodTag = data.eod ? `<span class="stock-eod">${fmtEodDate(data.eodDate)}</span>` : '';
-        body.innerHTML = `<div class="stock-top-line"><span class="stock-name">${instrumentName(id)}</span><span class="stock-value">${fmtStockValue(id, data.value)}</span></div><div class="stock-meta-row">${chgTxt}${eodTag}</div>`;
+        body.innerHTML = `${nameLine}${tickerLine}<div class="stock-value">${fmtStockValue(id, data.value)}</div><div class="stock-change-line ${chgClass}">${chgTxt}${eodTag}</div>`;
       }
       body.style.opacity = 1;
     }, 180);
