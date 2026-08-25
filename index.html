@@ -1189,24 +1189,23 @@ async function fetchBrapiData(){
   const hasProxy = !!CFG.brapiProxyUrl;
   const hasToken = !!CFG.brapiToken;
   const symbols = (hasProxy || hasToken) ? Object.keys(idMap) : ['PETR4'];
-  let results = [];
-  if(hasProxy){
-    try{
-      results = await fetchBrapiViaProxy(symbols, CFG.brapiProxyUrl);
-    }catch(e){ console.warn('brapi proxy fetch failed', e); }
-  }
-  if(!results.length){
-    // Fallback: call brapi.dev directly. This is likely to fail from a
-    // browser (brapi's own docs recommend backend-only usage), but costs
-    // nothing to attempt if no proxy is configured yet.
-    try{
-      results = await fetchBrapiQuoteV2(symbols, hasToken ? CFG.brapiToken : null);
-    }catch(e){
-      console.warn('brapi v2 fetch failed, falling back to v1', e);
-      try{ results = await fetchBrapiQuoteV1(symbols, hasToken ? CFG.brapiToken : null); }
-      catch(e2){ console.warn('brapi v1 fallback also failed', e2); return; }
+
+  // brapi's free plan allows only 1 symbol per request, so we fetch each
+  // one separately instead of batching them into a single call.
+  async function fetchOneSymbol(sym){
+    if(hasProxy){
+      try{ return await fetchBrapiViaProxy([sym], CFG.brapiProxyUrl); }
+      catch(e){ console.warn('brapi proxy fetch failed for', sym, e); }
+    }
+    try{ return await fetchBrapiQuoteV2([sym], hasToken ? CFG.brapiToken : null); }
+    catch(e){
+      try{ return await fetchBrapiQuoteV1([sym], hasToken ? CFG.brapiToken : null); }
+      catch(e2){ console.warn('brapi fetch (both versions) failed for', sym, e2); return []; }
     }
   }
+
+  const perSymbolResults = await Promise.all(symbols.map(fetchOneSymbol));
+  const results = perSymbolResults.flat();
   results.forEach(item=>{
     const id = idMap[item.symbol];
     const d = item.data;
